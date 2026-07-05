@@ -1,0 +1,14 @@
+{
+  "log_file_path": "onecomme_log.jsonl",
+  "overlay_state_path": "overlay_state.json",
+  "voting_window_seconds": 180,
+  "minimum_votes": 20,
+  "end_rate_threshold": 0.7,
+  "poll_interval_seconds": 0.5,
+  "supported_services": [
+    "twicas",
+    "kick",
+    "twitch"
+  ],
+  "read_existing_log_on_start": false
+}
