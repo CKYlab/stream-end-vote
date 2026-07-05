@@ -37,9 +37,8 @@ echo ========================================
 echo.
 echo Output:
 echo release
-echo ????????_v0.1.zip
+echo release zip created
 echo.
-pause
 exit /b 0
 
 :error
@@ -48,5 +47,4 @@ echo ========================================
 echo Build failed.
 echo ========================================
 echo.
-pause
 exit /b 1

@@ -197,13 +197,17 @@ class EndVoteApp:
         candidates = find_onecomme_log_candidates()
         if not candidates:
             self.action_var.set(
-                "わんコメのコメント保存ファイルが見つかりませんでした。\n"
+                "わんコメのコメント保存ファイル（.log / .jsonl）が見つかりませんでした。\n"
                 "まず、わんコメ側で以下を確認してください。\n"
                 "1. わんコメを起動しているか\n"
                 "2. 設定 → その他 で『コメントログを残す』がONか\n"
                 "3. 『ログをファイルとしても書き出し』がONか\n"
                 "4. 設定後にコメントが1個以上流れたか"
             )
+            return
+
+        if len(candidates) == 1:
+            self._use_log_file(candidates[0].path)
             return
 
         selected = self._choose_log_candidate(candidates)
@@ -266,9 +270,8 @@ class EndVoteApp:
         selected = filedialog.askopenfilename(
             title="手動でわんコメログを選ぶ",
             filetypes=[
-                ("わんコメログ", "*.jsonl"),
-                ("Log files", "*.log"),
-                ("All files", "*.*"),
+                ("わんコメログ", "*.log;*.jsonl"),
+                ("すべてのファイル", "*.*"),
             ],
         )
         if not selected:

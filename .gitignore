@@ -9,14 +9,12 @@ build/
 dist/
 release/
 *.spec
-配信終了投票くん_v*.zip
-release/
 *.zip
 
 *.jsonl
 !samples/*.jsonl
-overlay_state.json
 *.tmp
 
 .agents/
 テスト/
+配信終了投票くん_v*/

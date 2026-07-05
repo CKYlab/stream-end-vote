@@ -17,7 +17,7 @@ class LogDiscoveryTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temp_dir:
             root = Path(temp_dir)
             old_log = root / "old.jsonl"
-            new_log = root / "nested" / "new.jsonl"
+            new_log = root / "nested" / "new.log"
             ignored = root / "memo.txt"
             new_log.parent.mkdir()
             old_log.write_text("{}", encoding="utf-8")
@@ -36,7 +36,27 @@ class LogDiscoveryTest(unittest.TestCase):
 
             candidates = find_onecomme_log_candidates(search_dirs=[root])
 
-        self.assertEqual([item.path.name for item in candidates], ["new.jsonl", "old.jsonl"])
+        self.assertEqual([item.path.name for item in candidates], ["new.log", "old.jsonl"])
+
+    def test_log_extension_is_discovered(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            log_file = root / "2026-07-05.log"
+            log_file.write_text("{}", encoding="utf-8")
+
+            candidates = find_onecomme_log_candidates(search_dirs=[root])
+
+        self.assertEqual([item.path.name for item in candidates], ["2026-07-05.log"])
+
+    def test_jsonl_extension_is_discovered(self) -> None:
+        with tempfile.TemporaryDirectory() as temp_dir:
+            root = Path(temp_dir)
+            log_file = root / "2026-07-05.jsonl"
+            log_file.write_text("{}", encoding="utf-8")
+
+            candidates = find_onecomme_log_candidates(search_dirs=[root])
+
+        self.assertEqual([item.path.name for item in candidates], ["2026-07-05.jsonl"])
 
     def test_missing_comments_dir_returns_empty_list(self) -> None:
         missing = Path(tempfile.gettempdir()) / "amemiya-missing-onecomme-comments"
@@ -45,4 +65,3 @@ class LogDiscoveryTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

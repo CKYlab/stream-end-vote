@@ -5,6 +5,9 @@ from pathlib import Path
 import os
 
 
+LOG_PATTERNS = ("*.log", "*.jsonl")
+
+
 @dataclass(frozen=True)
 class LogCandidate:
     path: Path
@@ -31,10 +34,12 @@ def find_onecomme_log_candidates(
         if not root.exists() or not root.is_dir():
             continue
         try:
-            files = root.rglob("*.jsonl")
-            for path in files:
-                if path.is_file():
-                    candidates.append(LogCandidate(path.resolve(), path.stat().st_mtime))
+            for pattern in LOG_PATTERNS:
+                for path in root.rglob(pattern):
+                    if path.is_file():
+                        candidates.append(
+                            LogCandidate(path.resolve(), path.stat().st_mtime)
+                        )
         except OSError:
             continue
 
@@ -52,4 +57,3 @@ def _dedupe_paths(paths: list[Path]) -> list[Path]:
         seen.add(key)
         result.append(path)
     return result
-
