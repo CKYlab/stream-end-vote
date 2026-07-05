@@ -1,0 +1,14 @@
+{
+  "log_file_path": "samples/sample_log.jsonl",
+  "overlay_state_path": "overlay_state.json",
+  "voting_window_seconds": 180,
+  "minimum_votes": 3,
+  "end_rate_threshold": 0.6,
+  "poll_interval_seconds": 0.5,
+  "supported_services": [
+    "twicas",
+    "kick",
+    "twitch"
+  ],
+  "read_existing_log_on_start": true
+}
