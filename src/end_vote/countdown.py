@@ -10,17 +10,23 @@ MODE_NORMAL = "normal"
 MODE_COUNTDOWN = "countdown"
 MODE_CANCELLED = "cancelled"
 MODE_WOULD_STOP = "would_stop"
+MODE_STOPPING = "stopping"
+MODE_STOPPED = "stopped"
+MODE_STOP_FAILED = "stop_failed"
 
 
 class CountdownController:
     """終了ライン到達後のカウントダウン状態を管理する。
 
-    v0.3.5 の安全仕様:
-    - OBS停止処理はこのクラスにもアプリ本体にも存在しない。
-    - obs-websocket には接続しない。Stop Streaming は呼ばない。
-    - stop_streaming_enabled が True でも on_stop_intent (将来のv0.4用
-      フック) を呼ぶだけで、アプリ本体は on_stop_intent を渡さない。
-    - カウントダウン完了時は would_stop 表示のみで配信は継続する。
+    v0.4 の安全仕様:
+    - このクラス自体はOBSに触らない。カウントダウン完走時に
+      stop_streaming_enabled が True の場合だけ on_stop_intent を呼ぶ。
+      実際の停止はアプリ本体が別スレッドで行い、結果を
+      report_stop_success / report_stop_failure で返す。
+    - stop_streaming_enabled が False なら on_stop_intent は決して
+      呼ばれず、would_stop 表示のみで配信は継続する。
+    - カウントダウンなしで停止要求が出ることはない
+      （stopping へは countdown 完走からしか遷移しない）。
     """
 
     def __init__(
@@ -43,6 +49,8 @@ class CountdownController:
         self._on_stop_intent = on_stop_intent
 
         self.mode = MODE_NORMAL
+        self.stop_result: str | None = None
+        self.stop_error: str | None = None
         self._started_at: float | None = None
         self._deadline: float | None = None
         self._cancelled_at: float | None = None
@@ -79,6 +87,11 @@ class CountdownController:
             else:
                 return
 
+        # stopping は停止要求の結果待ち。stopped / stop_failed は配信者が
+        # 確認するまで表示を残す（リセットで戻す）。
+        if self.mode in (MODE_STOPPING, MODE_STOPPED, MODE_STOP_FAILED):
+            return
+
         if self.mode == MODE_COUNTDOWN:
             if self._deadline is not None and current >= self._deadline:
                 self._finish(current)
@@ -94,6 +107,7 @@ class CountdownController:
         self._start(current, live_id)
 
     def cancel(self, *, now: float | None = None) -> bool:
+        # stopping以降は要求が出た後なのでキャンセル不可。
         if self.mode not in (MODE_COUNTDOWN, MODE_WOULD_STOP):
             return False
         current = time.time() if now is None else now
@@ -103,6 +117,16 @@ class CountdownController:
         self._finished_at = None
         self._cancelled_at = current
         return True
+
+    def report_stop_success(self) -> None:
+        self.mode = MODE_STOPPED
+        self.stop_result = "success"
+        self.stop_error = None
+
+    def report_stop_failure(self, error: str) -> None:
+        self.mode = MODE_STOP_FAILED
+        self.stop_result = "failed"
+        self.stop_error = error
 
     def reset(self) -> None:
         """表示状態だけをnormalへ戻す。同一配信の発動履歴は保持する。"""
@@ -123,6 +147,8 @@ class CountdownController:
             "countdown_remaining": remaining,
             "countdown_started_at": started_at,
             "can_cancel": self.mode == MODE_COUNTDOWN,
+            "stop_result": self.stop_result,
+            "stop_error": self.stop_error,
         }
 
     def _already_triggered(self, live_id: str | None) -> bool:
@@ -143,16 +169,20 @@ class CountdownController:
             self._triggered_without_live_id = True
 
     def _finish(self, now: float) -> None:
-        self.mode = MODE_WOULD_STOP
         self._deadline = None
         self._finished_at = now
-        # v0.3.5: ここにOBS停止処理は実装しない。stop_streaming_enabled が
-        # True の場合のみ将来用フックを通知する(本体は何も渡していない)。
+        # 停止要求はカウントダウン完走時のここからのみ出る。
+        # stop_streaming_enabled が False なら表示のみで何も呼ばない。
         if self.stop_streaming_enabled and self._on_stop_intent is not None:
+            self.mode = MODE_STOPPING
             self._on_stop_intent()
+        else:
+            self.mode = MODE_WOULD_STOP
 
     def _to_normal(self) -> None:
         self.mode = MODE_NORMAL
+        self.stop_result = None
+        self.stop_error = None
         self._started_at = None
         self._deadline = None
         self._cancelled_at = None

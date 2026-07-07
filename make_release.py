@@ -8,7 +8,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 RELEASE = ROOT / "release"
-ZIP_PATH = ROOT / "配信終了投票くん_v0.3.5.zip"
+ZIP_PATH = ROOT / "配信終了投票くん_v0.4.zip"
 
 EXPECTED_RELEASE_NAMES = [
     "01_最初に読む_使い方.txt",
@@ -63,8 +63,12 @@ def write_release_config(path: Path) -> None:
     config = json.loads(source_path.read_text(encoding="utf-8"))
     config["log_file_path"] = ""
     config["overlay_state_path"] = "overlay_state.json"
-    # v0.3.5: 停止処理は存在しないが、配布物では必ずfalseにしておく。
+    # 配布物は必ず安全側: 停止OFF・OBS連携OFF・パスワード空で作り直す。
     config["stop_streaming_enabled"] = False
+    config["obs_websocket_enabled"] = False
+    config["obs_host"] = "127.0.0.1"
+    config["obs_port"] = 4455
+    config["obs_password"] = ""
     path.write_text(
         json.dumps(config, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -87,6 +91,10 @@ def write_release_overlay_state(path: Path) -> None:
         "countdown_remaining": 0,
         "countdown_started_at": None,
         "can_cancel": False,
+        "obs_connected": None,
+        "stop_streaming_enabled": False,
+        "stop_result": None,
+        "stop_error": None,
     }
     path.write_text(
         json.dumps(state, ensure_ascii=False, indent=2) + "\n",

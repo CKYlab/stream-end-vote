@@ -5,7 +5,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ========================================
-echo Build amemiya-end-vote v0.3.5
+echo Build amemiya-end-vote v0.4
 echo ========================================
 echo.
 
@@ -17,12 +17,12 @@ if exist "amemiya-end-vote.spec" del /Q "amemiya-end-vote.spec"
 
 echo.
 echo [2/4] Installing requirements...
-python -m pip install -r requirements-dev.txt
+python -m pip install -r requirements.txt -r requirements-dev.txt
 if errorlevel 1 goto error
 
 echo.
 echo [3/4] Building exe...
-python -m PyInstaller --clean --noconfirm --onefile --windowed --name amemiya-end-vote --paths "%CD%\src" --collect-submodules end_vote run.py
+python -m PyInstaller --clean --noconfirm --onefile --windowed --name amemiya-end-vote --paths "%CD%\src" --collect-submodules end_vote --collect-submodules obsws_python run.py
 if errorlevel 1 goto error
 
 echo.

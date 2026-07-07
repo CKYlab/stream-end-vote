@@ -13,6 +13,9 @@ from end_vote.countdown import (
     MODE_CANCELLED,
     MODE_COUNTDOWN,
     MODE_NORMAL,
+    MODE_STOP_FAILED,
+    MODE_STOPPED,
+    MODE_STOPPING,
     MODE_WOULD_STOP,
     CountdownController,
 )
@@ -143,6 +146,88 @@ class CountdownControllerTest(unittest.TestCase):
         controller.update(threshold_met=False, live_id=None, now=base + 20)
         controller.update(threshold_met=True, live_id=None, now=base + 30)
         self.assertEqual(controller.mode, MODE_NORMAL)
+
+    def test_stop_hook_called_when_stop_streaming_enabled(self) -> None:
+        calls: list[str] = []
+        controller = make_controller(
+            stop_streaming_enabled=True,
+            on_stop_intent=lambda: calls.append("stop"),
+        )
+        base = time.time()
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        self.assertEqual(calls, [])
+
+        controller.update(threshold_met=True, live_id="live-1", now=base + 31)
+
+        self.assertEqual(controller.mode, MODE_STOPPING)
+        self.assertEqual(calls, ["stop"])
+
+    def test_stop_result_success_moves_to_stopped(self) -> None:
+        controller = make_controller(
+            stop_streaming_enabled=True, on_stop_intent=lambda: None
+        )
+        base = time.time()
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        controller.update(threshold_met=True, live_id="live-1", now=base + 31)
+
+        controller.report_stop_success()
+
+        self.assertEqual(controller.mode, MODE_STOPPED)
+        state = controller.state(now=base + 32)
+        self.assertEqual(state["mode"], "stopped")
+        self.assertEqual(state["stop_result"], "success")
+        self.assertIsNone(state["stop_error"])
+        self.assertFalse(state["can_cancel"])
+
+    def test_stop_failure_moves_to_stop_failed_with_error(self) -> None:
+        controller = make_controller(
+            stop_streaming_enabled=True, on_stop_intent=lambda: None
+        )
+        base = time.time()
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        controller.update(threshold_met=True, live_id="live-1", now=base + 31)
+
+        controller.report_stop_failure("接続できません: refused")
+
+        self.assertEqual(controller.mode, MODE_STOP_FAILED)
+        state = controller.state(now=base + 32)
+        self.assertEqual(state["mode"], "stop_failed")
+        self.assertEqual(state["stop_result"], "failed")
+        self.assertEqual(state["stop_error"], "接続できません: refused")
+
+    def test_cancel_prevents_stop_hook(self) -> None:
+        calls: list[str] = []
+        controller = make_controller(
+            stop_streaming_enabled=True,
+            on_stop_intent=lambda: calls.append("stop"),
+        )
+        base = time.time()
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        controller.cancel(now=base + 10)
+
+        # 締め切り時刻を過ぎてもキャンセル済みなら停止フックは呼ばれない。
+        controller.update(threshold_met=True, live_id="live-1", now=base + 60)
+
+        self.assertEqual(calls, [])
+        self.assertNotIn(
+            controller.mode, (MODE_STOPPING, MODE_STOPPED, MODE_STOP_FAILED)
+        )
+
+    def test_reset_clears_stop_result(self) -> None:
+        controller = make_controller(
+            stop_streaming_enabled=True, on_stop_intent=lambda: None
+        )
+        base = time.time()
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        controller.update(threshold_met=True, live_id="live-1", now=base + 31)
+        controller.report_stop_failure("error")
+
+        controller.reset()
+
+        state = controller.state(now=base + 40)
+        self.assertEqual(state["mode"], "normal")
+        self.assertIsNone(state["stop_result"])
+        self.assertIsNone(state["stop_error"])
 
     def test_countdown_remaining_counts_down(self) -> None:
         controller = make_controller()

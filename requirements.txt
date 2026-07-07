@@ -1,2 +1,3 @@
-# v0.1 uses only the Python standard library.
-
+# v0.4: obs-websocket (v5) client. Pure Python (dep: websocket-client),
+# works with Python 3.11 and PyInstaller.
+obsws-python>=1.7

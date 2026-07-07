@@ -12,5 +12,9 @@
   "mode": "normal",
   "countdown_remaining": 0,
   "countdown_started_at": null,
-  "can_cancel": false
+  "can_cancel": false,
+  "obs_connected": null,
+  "stop_streaming_enabled": false,
+  "stop_result": null,
+  "stop_error": null
 }

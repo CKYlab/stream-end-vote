@@ -23,6 +23,10 @@ class AppConfig:
     countdown_seconds: int
     trigger_once_per_live: bool
     stop_streaming_enabled: bool
+    obs_websocket_enabled: bool
+    obs_host: str
+    obs_port: int
+    obs_password: str
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
@@ -37,8 +41,14 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "countdown_enabled": True,
     "countdown_seconds": 30,
     "trigger_once_per_live": True,
-    # v0.3.5では停止処理そのものが存在しないため、このフラグは常にfalse運用。
+    # 安全側の初期値。実際に停止するには config.json で
+    # obs_websocket_enabled と stop_streaming_enabled の両方を
+    # 手で true にする必要がある（GUIからはONにできない）。
     "stop_streaming_enabled": False,
+    "obs_websocket_enabled": False,
+    "obs_host": "127.0.0.1",
+    "obs_port": 4455,
+    "obs_password": "",
 }
 
 
@@ -86,4 +96,8 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         countdown_seconds=int(merged["countdown_seconds"]),
         trigger_once_per_live=bool(merged["trigger_once_per_live"]),
         stop_streaming_enabled=bool(merged["stop_streaming_enabled"]),
+        obs_websocket_enabled=bool(merged["obs_websocket_enabled"]),
+        obs_host=str(merged["obs_host"]),
+        obs_port=int(merged["obs_port"]),
+        obs_password=str(merged["obs_password"]),
     )

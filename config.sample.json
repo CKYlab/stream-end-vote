@@ -14,5 +14,9 @@
   "countdown_enabled": true,
   "countdown_seconds": 30,
   "trigger_once_per_live": true,
-  "stop_streaming_enabled": false
+  "stop_streaming_enabled": false,
+  "obs_websocket_enabled": false,
+  "obs_host": "127.0.0.1",
+  "obs_port": 4455,
+  "obs_password": ""
 }
