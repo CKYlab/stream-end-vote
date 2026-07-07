@@ -483,7 +483,7 @@ class EndVoteApp:
     def _open_obs_settings(self) -> None:
         dialog = tk.Toplevel(self.root)
         dialog.title("OBS設定")
-        dialog.geometry("520x360")
+        dialog.geometry("520x420")
         dialog.resizable(False, False)
         dialog.transient(self.root)
 
@@ -540,6 +540,17 @@ class EndVoteApp:
         tk.Entry(form, textvariable=password_var, width=34, show="*").grid(
             row=2, column=1, sticky="we", pady=4
         )
+        tk.Label(
+            form,
+            text=(
+                "OBSの「ツール → WebSocketサーバー設定」にある認証用パスワードです。\n"
+                "認証がOFFなら空欄でOK。作者や第三者に送る必要はありません。"
+            ),
+            fg="#6b7280",
+            anchor="w",
+            justify="left",
+            wraplength=360,
+        ).grid(row=3, column=1, sticky="w", pady=(0, 4))
         form.columnconfigure(1, weight=1)
 
         status_label = tk.Label(
