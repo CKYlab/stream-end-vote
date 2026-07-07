@@ -1,4 +1,4 @@
-from __future__ import annotations
+﻿from __future__ import annotations
 
 import argparse
 from datetime import datetime
@@ -45,25 +45,22 @@ class EndVoteApp:
         self.root.geometry("780x700")
         self.root.resizable(False, False)
 
-        self.action_var = tk.StringVar(value="今やること：わんコメログを自動で探してください")
-        self.counts_var = tk.StringVar(value="終了 0 / 続行 0 / 有効 0")
-        self.rate_var = tk.StringVar(value="終了率 0%")
-        self.visible_var = tk.StringVar(value="OBS表示: ON")
-        self.countdown_var = tk.StringVar(value="カウントダウン: なし")
-        self.obs_link_var = tk.StringVar(value="OBS連携: OFF")
-        self.obs_stop_var = tk.StringVar(value="OBS停止: OFF（表示のみ）")
-        self.obs_test_var = tk.StringVar(value="接続テスト結果: -")
-        initial_log_path = str(self.config.log_file_path)
-        self.log_path_var = tk.StringVar(
-            value=f"ログ: {initial_log_path}" if initial_log_path not in ("", ".") else "ログ: 未選択"
-        )
-        self.last_read_var = tk.StringVar(value="最後に読んだ時刻: -")
+        self.action_var = tk.StringVar(value="莉翫ｄ繧九％縺ｨ・壹ｏ繧薙さ繝｡繝ｭ繧ｰ繧定・蜍輔〒謗｢縺励※縺上□縺輔＞")
+        self.counts_var = tk.StringVar(value="邨ゆｺ・0 / 邯夊｡・0 / 譛牙柑 0")
+        self.rate_var = tk.StringVar(value="邨ゆｺ・紫 0%")
+        self.visible_var = tk.StringVar(value="OBS陦ｨ遉ｺ: ON")
+        self.countdown_var = tk.StringVar(value="繧ｫ繧ｦ繝ｳ繝医ム繧ｦ繝ｳ: 縺ｪ縺・)
+        self.obs_link_var = tk.StringVar(value="OBS騾｣謳ｺ: OFF")
+        self.obs_stop_var = tk.StringVar(value="OBS蛛懈ｭ｢: OFF・郁｡ｨ遉ｺ縺ｮ縺ｿ・・)
+        self.obs_test_var = tk.StringVar(value="謗･邯壹ユ繧ｹ繝育ｵ先棡: -")
+        self.log_path_var = tk.StringVar(value=f"繝ｭ繧ｰ: {self.config.log_file_path}")
+        self.last_read_var = tk.StringVar(value="譛蠕後↓隱ｭ繧薙□譎ょ綾: -")
         self.last_service_var = tk.StringVar(value="service: -")
         self.last_name_var = tk.StringVar(value="displayName: -")
         self.last_comment_var = tk.StringVar(value="comment: -")
         self.last_voter_var = tk.StringVar(value="voter_id: -")
-        self.last_result_var = tk.StringVar(value="判定結果: -")
-        self.last_reason_var = tk.StringVar(value="ignored理由: -")
+        self.last_result_var = tk.StringVar(value="蛻､螳夂ｵ先棡: -")
+        self.last_reason_var = tk.StringVar(value="ignored逅・罰: -")
 
         self._build_ui()
         self._write_state()
@@ -87,8 +84,7 @@ class EndVoteApp:
         )
 
     def _stop_streaming_effective(self) -> bool:
-        # 実際に停止するには両方のフラグをconfig.jsonで明示ONにする必要がある。
-        return (
+        # 螳滄圀縺ｫ蛛懈ｭ｢縺吶ｋ縺ｫ縺ｯ荳｡譁ｹ縺ｮ繝輔Λ繧ｰ繧団onfig.json縺ｧ譏守､ｺON縺ｫ縺吶ｋ蠢・ｦ√′縺ゅｋ縲・        return (
             self.config.obs_websocket_enabled and self.config.stop_streaming_enabled
         )
 
@@ -105,7 +101,7 @@ class EndVoteApp:
         frame = tk.Frame(self.root, padx=18, pady=16)
         frame.pack(fill="both", expand=True)
 
-        tk.Label(frame, text="配信終了投票", font=("Yu Gothic UI", 18, "bold")).pack(
+        tk.Label(frame, text="驟堺ｿ｡邨ゆｺ・兜逾ｨ", font=("Yu Gothic UI", 18, "bold")).pack(
             anchor="w"
         )
         tk.Label(
@@ -128,7 +124,7 @@ class EndVoteApp:
         )
 
         countdown_frame = tk.LabelFrame(
-            frame, text="配信終了カウントダウン（OBS停止は設定OFF時は実行されません）", padx=12, pady=8
+            frame, text="驟堺ｿ｡邨ゆｺ・き繧ｦ繝ｳ繝医ム繧ｦ繝ｳ・・0.3.5縺ｧ縺ｯ蛛懈ｭ｢縺励∪縺帙ｓ・・, padx=12, pady=8
         )
         countdown_frame.pack(fill="x", pady=(0, 6))
         tk.Label(
@@ -141,14 +137,14 @@ class EndVoteApp:
         ).pack(fill="x", anchor="w")
         self.cancel_countdown_button = tk.Button(
             countdown_frame,
-            text="カウントダウンをキャンセル",
+            text="繧ｫ繧ｦ繝ｳ繝医ム繧ｦ繝ｳ繧偵く繝｣繝ｳ繧ｻ繝ｫ",
             width=24,
             state="disabled",
             command=self._cancel_countdown,
         )
         self.cancel_countdown_button.pack(anchor="w", pady=(6, 0))
 
-        obs_frame = tk.LabelFrame(frame, text="OBS連携", padx=12, pady=8)
+        obs_frame = tk.LabelFrame(frame, text="OBS騾｣謳ｺ", padx=12, pady=8)
         obs_frame.pack(fill="x", pady=(0, 6))
         tk.Label(
             obs_frame,
@@ -168,7 +164,7 @@ class EndVoteApp:
         obs_test_row.pack(fill="x", anchor="w", pady=(6, 0))
         self.obs_test_button = tk.Button(
             obs_test_row,
-            text="OBS接続テスト",
+            text="OBS謗･邯壹ユ繧ｹ繝・,
             width=16,
             command=self._test_obs_connection,
         )
@@ -186,13 +182,13 @@ class EndVoteApp:
         log_button_row.pack(anchor="w", pady=(6, 0))
         tk.Button(
             log_button_row,
-            text="わんコメログを自動で探す",
+            text="繧上ｓ繧ｳ繝｡繝ｭ繧ｰ繧定・蜍輔〒謗｢縺・,
             width=24,
             command=self._auto_find_log_file,
         ).pack(side="left", padx=(0, 8))
         tk.Button(
             log_button_row,
-            text="手動でログファイルを選ぶ",
+            text="謇句虚縺ｧ繝ｭ繧ｰ繝輔ぃ繧､繝ｫ繧帝∈縺ｶ",
             width=24,
             command=self._select_log_file,
         ).pack(side="left", padx=(0, 8))
@@ -201,14 +197,14 @@ class EndVoteApp:
         button_row.pack(anchor="w", pady=(8, 0))
         tk.Button(
             button_row,
-            text="OBS表示 ON/OFF",
+            text="OBS陦ｨ遉ｺ ON/OFF",
             width=16,
             command=self._toggle_visible,
         ).pack(side="left", padx=(0, 8))
-        tk.Button(button_row, text="投票をリセット", width=14, command=self._reset).pack(
+        tk.Button(button_row, text="謚慕･ｨ繧偵Μ繧ｻ繝・ヨ", width=14, command=self._reset).pack(
             side="left", padx=(0, 8)
         )
-        tk.Button(button_row, text="終了する", width=10, command=self._close).pack(
+        tk.Button(button_row, text="邨ゆｺ・☆繧・, width=10, command=self._close).pack(
             side="left"
         )
 
@@ -220,7 +216,7 @@ class EndVoteApp:
             justify="left",
         ).pack(anchor="w", pady=(16, 10))
 
-        details = tk.LabelFrame(frame, text="最後に読んだコメント", padx=12, pady=10)
+        details = tk.LabelFrame(frame, text="譛蠕後↓隱ｭ繧薙□繧ｳ繝｡繝ｳ繝・, padx=12, pady=10)
         details.pack(fill="x", expand=False, pady=(8, 0))
         for variable in (
             self.last_read_var,
@@ -245,11 +241,11 @@ class EndVoteApp:
         if self.worker and self.worker.is_alive():
             return
 
-        if str(self.config.log_file_path) in ("", ".") or not self.config.log_file_path.is_file():
-            self.action_var.set("今やること：わんコメログを自動で探してください")
+        if not self.config.log_file_path.exists():
+            self.action_var.set("莉翫ｄ繧九％縺ｨ・壹ｏ繧薙さ繝｡繝ｭ繧ｰ繧定・蜍輔〒謗｢縺励※縺上□縺輔＞")
             return
 
-        self.action_var.set("監視中：コメントを待っています")
+        self.action_var.set("逶｣隕紋ｸｭ・壹さ繝｡繝ｳ繝医ｒ蠕・▲縺ｦ縺・∪縺・)
         self.stop_event = threading.Event()
         self.worker = threading.Thread(
             target=self._tail_worker,
@@ -296,12 +292,12 @@ class EndVoteApp:
         candidates = find_onecomme_log_candidates()
         if not candidates:
             self.action_var.set(
-                "わんコメのコメント保存ファイル（.log / .jsonl）が見つかりませんでした。\n"
-                "まず、わんコメ側で以下を確認してください。\n"
-                "1. わんコメを起動しているか\n"
-                "2. 設定 → その他 で『コメントログを残す』がONか\n"
-                "3. 『ログをファイルとしても書き出し』がONか\n"
-                "4. 設定後にコメントが1個以上流れたか"
+                "繧上ｓ繧ｳ繝｡縺ｮ繧ｳ繝｡繝ｳ繝井ｿ晏ｭ倥ヵ繧｡繧､繝ｫ・・log / .jsonl・峨′隕九▽縺九ｊ縺ｾ縺帙ｓ縺ｧ縺励◆縲・n"
+                "縺ｾ縺壹√ｏ繧薙さ繝｡蛛ｴ縺ｧ莉･荳九ｒ遒ｺ隱阪＠縺ｦ縺上□縺輔＞縲・n"
+                "1. 繧上ｓ繧ｳ繝｡繧定ｵｷ蜍輔＠縺ｦ縺・ｋ縺欺n"
+                "2. 險ｭ螳・竊・縺昴・莉・縺ｧ縲弱さ繝｡繝ｳ繝医Ο繧ｰ繧呈ｮ九☆縲上′ON縺欺n"
+                "3. 縲弱Ο繧ｰ繧偵ヵ繧｡繧､繝ｫ縺ｨ縺励※繧よ嶌縺榊・縺励上′ON縺欺n"
+                "4. 險ｭ螳壼ｾ後↓繧ｳ繝｡繝ｳ繝医′1蛟倶ｻ･荳頑ｵ√ｌ縺溘°"
             )
             return
 
@@ -316,7 +312,7 @@ class EndVoteApp:
 
     def _choose_log_candidate(self, candidates: list[LogCandidate]) -> Path | None:
         dialog = tk.Toplevel(self.root)
-        dialog.title("わんコメログ候補")
+        dialog.title("繧上ｓ繧ｳ繝｡繝ｭ繧ｰ蛟呵｣・)
         dialog.geometry("720x360")
         dialog.resizable(False, False)
         dialog.transient(self.root)
@@ -326,7 +322,7 @@ class EndVoteApp:
 
         tk.Label(
             dialog,
-            text="新しい順に並んでいます。使うログを選んでください。",
+            text="譁ｰ縺励＞鬆・↓荳ｦ繧薙〒縺・∪縺吶ゆｽｿ縺・Ο繧ｰ繧帝∈繧薙〒縺上□縺輔＞縲・,
             font=("Yu Gothic UI", 11, "bold"),
             anchor="w",
         ).pack(fill="x", padx=14, pady=(14, 8))
@@ -354,10 +350,10 @@ class EndVoteApp:
 
         button_row = tk.Frame(dialog)
         button_row.pack(anchor="e", padx=14, pady=12)
-        tk.Button(button_row, text="このログを使う", width=14, command=choose).pack(
+        tk.Button(button_row, text="縺薙・繝ｭ繧ｰ繧剃ｽｿ縺・, width=14, command=choose).pack(
             side="left", padx=(0, 8)
         )
-        tk.Button(button_row, text="キャンセル", width=10, command=cancel).pack(
+        tk.Button(button_row, text="繧ｭ繝｣繝ｳ繧ｻ繝ｫ", width=10, command=cancel).pack(
             side="left"
         )
         listbox.bind("<Double-Button-1>", lambda _event: choose())
@@ -367,10 +363,10 @@ class EndVoteApp:
 
     def _select_log_file(self) -> None:
         selected = filedialog.askopenfilename(
-            title="手動でわんコメログを選ぶ",
+            title="謇句虚縺ｧ繧上ｓ繧ｳ繝｡繝ｭ繧ｰ繧帝∈縺ｶ",
             filetypes=[
-                ("わんコメログ", "*.log;*.jsonl"),
-                ("すべてのファイル", "*.*"),
+                ("繧上ｓ繧ｳ繝｡繝ｭ繧ｰ", "*.log;*.jsonl"),
+                ("縺吶∋縺ｦ縺ｮ繝輔ぃ繧､繝ｫ", "*.*"),
             ],
         )
         if not selected:
@@ -382,7 +378,7 @@ class EndVoteApp:
         self._clear_event_queue()
         update_config(self.config_path, {"log_file_path": str(path)})
         self.config = load_config(self.config_path)
-        self.log_path_var.set(f"ログ: {self.config.log_file_path}")
+        self.log_path_var.set(f"繝ｭ繧ｰ: {self.config.log_file_path}")
         self.counter.reset()
         self.obs = self._create_obs_controller()
         self.countdown = self._create_countdown()
@@ -421,17 +417,17 @@ class EndVoteApp:
                     use_record_timestamp=False,
                 )
                 self._show_last_analysis(event["read_at"], analysis)
-                self.action_var.set("監視中：コメントを待っています")
+                self.action_var.set("逶｣隕紋ｸｭ・壹さ繝｡繝ｳ繝医ｒ蠕・▲縺ｦ縺・∪縺・)
             elif event_type == "parse_error":
                 self._show_last_error(event["read_at"], "parse_error", event["error"])
-                self.action_var.set("監視中：コメントを待っています")
+                self.action_var.set("逶｣隕紋ｸｭ・壹さ繝｡繝ｳ繝医ｒ蠕・▲縺ｦ縺・∪縺・)
             elif event_type == "watch_error":
                 self._show_last_error(event["read_at"], "watch_error", event["error"])
-                self.action_var.set(f"監視エラー: {event['error']}")
+                self.action_var.set(f"逶｣隕悶お繝ｩ繝ｼ: {event['error']}")
             elif event_type == "obs_test_result":
                 result = event["result"]
                 self.obs_connected = result.ok
-                self.obs_test_var.set(f"接続テスト結果: {result.message}")
+                self.obs_test_var.set(f"謗･邯壹ユ繧ｹ繝育ｵ先棡: {result.message}")
                 self.obs_test_button.config(state="normal")
             elif event_type == "obs_stop_result":
                 self._handle_obs_stop_result(event)
@@ -455,11 +451,11 @@ class EndVoteApp:
     def _test_obs_connection(self) -> None:
         if not self.config.obs_websocket_enabled:
             self.obs_test_var.set(
-                "接続テスト結果: OBS連携がOFFです（config.jsonのobs_websocket_enabled）"
+                "謗･邯壹ユ繧ｹ繝育ｵ先棡: OBS騾｣謳ｺ縺薫FF縺ｧ縺呻ｼ・onfig.json縺ｮobs_websocket_enabled・・
             )
             return
         self.obs_test_button.config(state="disabled")
-        self.obs_test_var.set("接続テスト結果: 接続中…")
+        self.obs_test_var.set("謗･邯壹ユ繧ｹ繝育ｵ先棡: 謗･邯壻ｸｭ窶ｦ")
 
         def worker() -> None:
             result = self.obs.test_connection()
@@ -468,7 +464,7 @@ class EndVoteApp:
         threading.Thread(target=worker, daemon=True).start()
 
     def _begin_obs_stop(self) -> None:
-        """カウントダウン完走時にのみCountdownControllerから呼ばれる。"""
+        """繧ｫ繧ｦ繝ｳ繝医ム繧ｦ繝ｳ螳瑚ｵｰ譎ゅ↓縺ｮ縺ｿCountdownController縺九ｉ蜻ｼ縺ｰ繧後ｋ縲・""
 
         def worker() -> None:
             try:
@@ -491,41 +487,41 @@ class EndVoteApp:
         if event["ok"]:
             self.obs_connected = True
             self.countdown.report_stop_success()
-            self.obs_test_var.set(f"接続テスト結果: {event['message']}")
+            self.obs_test_var.set(f"謗･邯壹ユ繧ｹ繝育ｵ先棡: {event['message']}")
         else:
             self.obs_connected = False
             self.countdown.report_stop_failure(event["error"])
-            self.obs_test_var.set(f"接続テスト結果: {event['error']}")
+            self.obs_test_var.set(f"謗･邯壹ユ繧ｹ繝育ｵ先棡: {event['error']}")
         self._write_state()
         self._refresh_labels()
 
     def _show_last_analysis(self, read_at: float, analysis: VoteAnalysis) -> None:
-        self.last_read_var.set(f"最後に読んだ時刻: {_format_time(read_at)}")
+        self.last_read_var.set(f"譛蠕後↓隱ｭ繧薙□譎ょ綾: {_format_time(read_at)}")
         self.last_service_var.set(f"service: {analysis.service or '-'}")
         self.last_name_var.set(f"displayName: {analysis.display_name or '-'}")
         self.last_comment_var.set(f"comment: {analysis.comment or '-'}")
         self.last_voter_var.set(f"voter_id: {analysis.voter_id or '-'}")
-        self.last_result_var.set(f"判定結果: {analysis.result}")
-        self.last_reason_var.set(f"ignored理由: {analysis.reason or '-'}")
+        self.last_result_var.set(f"蛻､螳夂ｵ先棡: {analysis.result}")
+        self.last_reason_var.set(f"ignored逅・罰: {analysis.reason or '-'}")
 
     def _show_last_error(self, read_at: float, kind: str, message: str) -> None:
-        self.last_read_var.set(f"最後に読んだ時刻: {_format_time(read_at)}")
+        self.last_read_var.set(f"譛蠕後↓隱ｭ繧薙□譎ょ綾: {_format_time(read_at)}")
         self.last_service_var.set("service: -")
         self.last_name_var.set("displayName: -")
         self.last_comment_var.set(f"comment: {message}")
         self.last_voter_var.set("voter_id: -")
-        self.last_result_var.set("判定結果: ignored")
-        self.last_reason_var.set(f"ignored理由: {kind}")
+        self.last_result_var.set("蛻､螳夂ｵ先棡: ignored")
+        self.last_reason_var.set(f"ignored逅・罰: {kind}")
 
     def _refresh_labels(self, state: dict | None = None) -> None:
         if state is None:
             state = self._current_state()
         end_rate_percent = int(round(state["end_rate"] * 100))
         self.counts_var.set(
-            f"終了 {state['end_votes']} / 続行 {state['continue_votes']} / 有効 {state['valid_votes']}"
+            f"邨ゆｺ・{state['end_votes']} / 邯夊｡・{state['continue_votes']} / 譛牙柑 {state['valid_votes']}"
         )
-        self.rate_var.set(f"終了率 {end_rate_percent}%")
-        self.visible_var.set(f"OBS表示: {'ON' if state['visible'] else 'OFF'}")
+        self.rate_var.set(f"邨ゆｺ・紫 {end_rate_percent}%")
+        self.visible_var.set(f"OBS陦ｨ遉ｺ: {'ON' if state['visible'] else 'OFF'}")
         self._refresh_countdown_labels(state)
 
     def _refresh_countdown_labels(self, state: dict) -> None:
@@ -534,27 +530,27 @@ class EndVoteApp:
             remaining = state.get("countdown_remaining", 0)
             if state.get("stop_streaming_enabled"):
                 self.countdown_var.set(
-                    f"終了ライン到達：{remaining}秒後にOBSの配信を停止します"
+                    f"邨ゆｺ・Λ繧､繝ｳ蛻ｰ驕費ｼ嘴remaining}遘貞ｾ後↓OBS縺ｮ驟堺ｿ｡繧貞●豁｢縺励∪縺・
                 )
             else:
                 self.countdown_var.set(
-                    f"終了ライン到達：{remaining}秒後に配信終了予定（停止OFF・表示のみ）"
+                    f"邨ゆｺ・Λ繧､繝ｳ蛻ｰ驕費ｼ嘴remaining}遘貞ｾ後↓驟堺ｿ｡邨ゆｺ・ｺ亥ｮ夲ｼ亥●豁｢OFF繝ｻ陦ｨ遉ｺ縺ｮ縺ｿ・・
                 )
         elif mode == MODE_CANCELLED:
-            self.countdown_var.set("カウントダウン: キャンセルされました")
+            self.countdown_var.set("繧ｫ繧ｦ繝ｳ繝医ム繧ｦ繝ｳ: 繧ｭ繝｣繝ｳ繧ｻ繝ｫ縺輔ｌ縺ｾ縺励◆")
         elif mode == MODE_WOULD_STOP:
             self.countdown_var.set(
-                "ここで停止予定です（OBS停止はOFFのため停止しません）"
+                "縺薙％縺ｧ蛛懈ｭ｢莠亥ｮ壹〒縺呻ｼ・BS蛛懈ｭ｢縺ｯOFF縺ｮ縺溘ａ蛛懈ｭ｢縺励∪縺帙ｓ・・
             )
         elif mode == MODE_STOPPING:
-            self.countdown_var.set("OBSへ停止要求中…")
+            self.countdown_var.set("OBS縺ｸ蛛懈ｭ｢隕∵ｱゆｸｭ窶ｦ")
         elif mode == MODE_STOPPED:
-            self.countdown_var.set("配信停止を実行しました")
+            self.countdown_var.set("驟堺ｿ｡蛛懈ｭ｢繧貞ｮ溯｡後＠縺ｾ縺励◆")
         elif mode == MODE_STOP_FAILED:
-            error = state.get("stop_error") or "原因不明"
-            self.countdown_var.set(f"配信停止に失敗しました: {error}")
+            error = state.get("stop_error") or "蜴溷屏荳肴・"
+            self.countdown_var.set(f"驟堺ｿ｡蛛懈ｭ｢縺ｫ螟ｱ謨励＠縺ｾ縺励◆: {error}")
         else:
-            self.countdown_var.set("カウントダウン: なし（終了ライン未到達）")
+            self.countdown_var.set("繧ｫ繧ｦ繝ｳ繝医ム繧ｦ繝ｳ: 縺ｪ縺暦ｼ育ｵゆｺ・Λ繧､繝ｳ譛ｪ蛻ｰ驕費ｼ・)
         self.cancel_countdown_button.config(
             state="normal" if state.get("can_cancel") else "disabled"
         )
@@ -562,18 +558,18 @@ class EndVoteApp:
     def _refresh_obs_static_labels(self) -> None:
         if self.config.obs_websocket_enabled:
             self.obs_link_var.set(
-                f"OBS連携: ON（{self.config.obs_host}:{self.config.obs_port}）"
+                f"OBS騾｣謳ｺ: ON・・self.config.obs_host}:{self.config.obs_port}・・
             )
         else:
-            self.obs_link_var.set("OBS連携: OFF")
+            self.obs_link_var.set("OBS騾｣謳ｺ: OFF")
         if self._stop_streaming_effective():
-            self.obs_stop_var.set("OBS停止: ON（カウントダウン後に停止します）")
+            self.obs_stop_var.set("OBS蛛懈ｭ｢: ON・医き繧ｦ繝ｳ繝医ム繧ｦ繝ｳ蠕後↓蛛懈ｭ｢縺励∪縺呻ｼ・)
         elif self.config.stop_streaming_enabled:
             self.obs_stop_var.set(
-                "OBS停止: OFF（obs_websocket_enabledがOFFのため停止しません）"
+                "OBS蛛懈ｭ｢: OFF・・bs_websocket_enabled縺薫FF縺ｮ縺溘ａ蛛懈ｭ｢縺励∪縺帙ｓ・・
             )
         else:
-            self.obs_stop_var.set("OBS停止: OFF（表示のみ）")
+            self.obs_stop_var.set("OBS蛛懈ｭ｢: OFF・郁｡ｨ遉ｺ縺ｮ縺ｿ・・)
 
     def _write_state(self) -> None:
         state = self._current_state()
@@ -619,8 +615,7 @@ def replay_sample(config_path: Path) -> None:
     for record in read_jsonl(config.log_file_path):
         counter.ingest(record)
     state = counter.state()
-    # replay時はカウントダウンを発動させず、normal状態の欄だけ埋める。
-    state.update(
+    # replay譎ゅ・繧ｫ繧ｦ繝ｳ繝医ム繧ｦ繝ｳ繧堤匱蜍輔＆縺帙★縲］ormal迥ｶ諷九・谺・□縺大沂繧√ｋ縲・    state.update(
         {
             "mode": "normal",
             "countdown_remaining": 0,
@@ -673,3 +668,4 @@ def _state_snapshot(state: dict) -> dict:
 
 if __name__ == "__main__":
     main()
+

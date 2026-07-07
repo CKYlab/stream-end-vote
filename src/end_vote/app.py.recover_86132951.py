@@ -53,10 +53,7 @@ class EndVoteApp:
         self.obs_link_var = tk.StringVar(value="OBS連携: OFF")
         self.obs_stop_var = tk.StringVar(value="OBS停止: OFF（表示のみ）")
         self.obs_test_var = tk.StringVar(value="接続テスト結果: -")
-        initial_log_path = str(self.config.log_file_path)
-        self.log_path_var = tk.StringVar(
-            value=f"ログ: {initial_log_path}" if initial_log_path not in ("", ".") else "ログ: 未選択"
-        )
+        self.log_path_var = tk.StringVar(value=f"ログ: {self.config.log_file_path}")
         self.last_read_var = tk.StringVar(value="最後に読んだ時刻: -")
         self.last_service_var = tk.StringVar(value="service: -")
         self.last_name_var = tk.StringVar(value="displayName: -")
@@ -128,7 +125,7 @@ class EndVoteApp:
         )
 
         countdown_frame = tk.LabelFrame(
-            frame, text="配信終了カウントダウン（OBS停止は設定OFF時は実行されません）", padx=12, pady=8
+            frame, text="配信終了カウントダウン（v0.3.5では停止しません）", padx=12, pady=8
         )
         countdown_frame.pack(fill="x", pady=(0, 6))
         tk.Label(
@@ -245,7 +242,7 @@ class EndVoteApp:
         if self.worker and self.worker.is_alive():
             return
 
-        if str(self.config.log_file_path) in ("", ".") or not self.config.log_file_path.is_file():
+        if not self.config.log_file_path.exists():
             self.action_var.set("今やること：わんコメログを自動で探してください")
             return
 

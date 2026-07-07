@@ -30,7 +30,7 @@ class AppConfig:
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
-    "log_file_path": "onecomme_log.jsonl",
+    "log_file_path": "",
     "overlay_state_path": "overlay_state.json",
     "voting_window_seconds": 180,
     "minimum_votes": 20,
@@ -78,6 +78,8 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
     base_dir = path.resolve().parent
 
     def resolve(value: str) -> Path:
+        if not str(value).strip():
+            return Path()
         candidate = Path(value)
         if candidate.is_absolute():
             return candidate

@@ -1,7 +1,6 @@
 @echo off
 chcp 65001 >nul
 setlocal
-
 cd /d "%~dp0"
 
 echo ========================================
@@ -17,16 +16,25 @@ if exist "amemiya-end-vote.spec" del /Q "amemiya-end-vote.spec"
 
 echo.
 echo [2/4] Installing requirements...
-python -m pip install -r requirements.txt -r requirements-dev.txt
+python -m pip install -r requirements.txt
+if errorlevel 1 goto error
+
+python -m pip install -r requirements-dev.txt
 if errorlevel 1 goto error
 
 echo.
-echo [3/4] Building exe...
-python -m PyInstaller --clean --noconfirm --onefile --windowed --name amemiya-end-vote --paths "%CD%\src" --collect-submodules end_vote --collect-submodules obsws_python run.py
+echo [3/4] Checking imports...
+set PYTHONPATH=%~dp0src
+python -c "import end_vote.app; import end_vote.obs_control; print('import ok')"
 if errorlevel 1 goto error
 
 echo.
-echo [4/4] Creating release zip...
+echo [4/4] Building exe...
+python -m PyInstaller --clean --noconfirm --onefile --windowed --name amemiya-end-vote --paths "%~dp0src" --collect-submodules end_vote --hidden-import end_vote.app --hidden-import end_vote.config --hidden-import end_vote.vote --hidden-import end_vote.log_reader --hidden-import end_vote.log_discovery --hidden-import end_vote.overlay --hidden-import end_vote.countdown --hidden-import end_vote.obs_control run.py
+if errorlevel 1 goto error
+
+echo.
+echo Creating release zip...
 python make_release.py
 if errorlevel 1 goto error
 
@@ -37,8 +45,9 @@ echo ========================================
 echo.
 echo Output:
 echo release
-echo release zip created
+echo ????????_v0.4.zip
 echo.
+pause
 exit /b 0
 
 :error
@@ -47,5 +56,5 @@ echo ========================================
 echo Build failed.
 echo ========================================
 echo.
+pause
 exit /b 1
-

@@ -10,20 +10,10 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 
 from .config import DEFAULT_CONFIG_PATH, load_config, update_config
-from .countdown import (
-    MODE_CANCELLED,
-    MODE_COUNTDOWN,
-    MODE_STOP_FAILED,
-    MODE_STOPPED,
-    MODE_STOPPING,
-    MODE_WOULD_STOP,
-    CountdownController,
-)
 from .log_discovery import LogCandidate, find_onecomme_log_candidates
 from .log_reader import read_jsonl, tail_jsonl
-from .obs_control import ObsControlError, ObsController
 from .overlay import write_overlay_state
-from .vote import VoteAnalysis, VoteCounter, extract_live_id
+from .vote import VoteAnalysis, VoteCounter
 
 
 class EndVoteApp:
@@ -32,31 +22,20 @@ class EndVoteApp:
         self.config_path = config_path
         self.config = load_config(config_path)
         self.counter = self._create_counter()
-        self.obs = self._create_obs_controller()
-        self.countdown = self._create_countdown()
-        self.current_live_id: str | None = None
-        self.obs_connected: bool | None = None
         self.event_queue: queue.Queue[dict] = queue.Queue()
         self.stop_event = threading.Event()
         self.worker: threading.Thread | None = None
         self.last_overlay_snapshot: dict | None = None
 
-        self.root.title("Amemiya End Vote v0.4")
-        self.root.geometry("780x700")
+        self.root.title("Amemiya End Vote v0.1")
+        self.root.geometry("780x560")
         self.root.resizable(False, False)
 
         self.action_var = tk.StringVar(value="今やること：わんコメログを自動で探してください")
         self.counts_var = tk.StringVar(value="終了 0 / 続行 0 / 有効 0")
         self.rate_var = tk.StringVar(value="終了率 0%")
         self.visible_var = tk.StringVar(value="OBS表示: ON")
-        self.countdown_var = tk.StringVar(value="カウントダウン: なし")
-        self.obs_link_var = tk.StringVar(value="OBS連携: OFF")
-        self.obs_stop_var = tk.StringVar(value="OBS停止: OFF（表示のみ）")
-        self.obs_test_var = tk.StringVar(value="接続テスト結果: -")
-        initial_log_path = str(self.config.log_file_path)
-        self.log_path_var = tk.StringVar(
-            value=f"ログ: {initial_log_path}" if initial_log_path not in ("", ".") else "ログ: 未選択"
-        )
+        self.log_path_var = tk.StringVar(value=f"ログ: {self.config.log_file_path}")
         self.last_read_var = tk.StringVar(value="最後に読んだ時刻: -")
         self.last_service_var = tk.StringVar(value="service: -")
         self.last_name_var = tk.StringVar(value="displayName: -")
@@ -76,29 +55,6 @@ class EndVoteApp:
             minimum_votes=self.config.minimum_votes,
             end_rate_threshold=self.config.end_rate_threshold,
             supported_services=self.config.supported_services,
-        )
-
-    def _create_obs_controller(self) -> ObsController:
-        return ObsController(
-            enabled=self.config.obs_websocket_enabled,
-            host=self.config.obs_host,
-            port=self.config.obs_port,
-            password=self.config.obs_password,
-        )
-
-    def _stop_streaming_effective(self) -> bool:
-        # 実際に停止するには両方のフラグをconfig.jsonで明示ONにする必要がある。
-        return (
-            self.config.obs_websocket_enabled and self.config.stop_streaming_enabled
-        )
-
-    def _create_countdown(self) -> CountdownController:
-        return CountdownController(
-            enabled=self.config.countdown_enabled,
-            countdown_seconds=self.config.countdown_seconds,
-            trigger_once_per_live=self.config.trigger_once_per_live,
-            stop_streaming_enabled=self._stop_streaming_effective(),
-            on_stop_intent=self._begin_obs_stop,
         )
 
     def _build_ui(self) -> None:
@@ -126,61 +82,6 @@ class EndVoteApp:
         tk.Label(frame, textvariable=self.visible_var, fg="#4b5563").pack(
             anchor="w", pady=(0, 14)
         )
-
-        countdown_frame = tk.LabelFrame(
-            frame, text="配信終了カウントダウン（OBS停止は設定OFF時は実行されません）", padx=12, pady=8
-        )
-        countdown_frame.pack(fill="x", pady=(0, 6))
-        tk.Label(
-            countdown_frame,
-            textvariable=self.countdown_var,
-            font=("Yu Gothic UI", 13, "bold"),
-            anchor="w",
-            justify="left",
-            wraplength=680,
-        ).pack(fill="x", anchor="w")
-        self.cancel_countdown_button = tk.Button(
-            countdown_frame,
-            text="カウントダウンをキャンセル",
-            width=24,
-            state="disabled",
-            command=self._cancel_countdown,
-        )
-        self.cancel_countdown_button.pack(anchor="w", pady=(6, 0))
-
-        obs_frame = tk.LabelFrame(frame, text="OBS連携", padx=12, pady=8)
-        obs_frame.pack(fill="x", pady=(0, 6))
-        tk.Label(
-            obs_frame,
-            textvariable=self.obs_link_var,
-            anchor="w",
-            justify="left",
-        ).pack(fill="x", anchor="w")
-        tk.Label(
-            obs_frame,
-            textvariable=self.obs_stop_var,
-            font=("Yu Gothic UI", 11, "bold"),
-            anchor="w",
-            justify="left",
-            wraplength=680,
-        ).pack(fill="x", anchor="w")
-        obs_test_row = tk.Frame(obs_frame)
-        obs_test_row.pack(fill="x", anchor="w", pady=(6, 0))
-        self.obs_test_button = tk.Button(
-            obs_test_row,
-            text="OBS接続テスト",
-            width=16,
-            command=self._test_obs_connection,
-        )
-        self.obs_test_button.pack(side="left", padx=(0, 10))
-        tk.Label(
-            obs_test_row,
-            textvariable=self.obs_test_var,
-            anchor="w",
-            justify="left",
-            wraplength=520,
-        ).pack(side="left", fill="x")
-        self._refresh_obs_static_labels()
 
         log_button_row = tk.Frame(frame)
         log_button_row.pack(anchor="w", pady=(6, 0))
@@ -245,7 +146,7 @@ class EndVoteApp:
         if self.worker and self.worker.is_alive():
             return
 
-        if str(self.config.log_file_path) in ("", ".") or not self.config.log_file_path.is_file():
+        if not self.config.log_file_path.exists():
             self.action_var.set("今やること：わんコメログを自動で探してください")
             return
 
@@ -384,10 +285,6 @@ class EndVoteApp:
         self.config = load_config(self.config_path)
         self.log_path_var.set(f"ログ: {self.config.log_file_path}")
         self.counter.reset()
-        self.obs = self._create_obs_controller()
-        self.countdown = self._create_countdown()
-        self.current_live_id = None
-        self._refresh_obs_static_labels()
         self._write_state()
         self._refresh_labels()
         self._start_tail()
@@ -412,9 +309,6 @@ class EndVoteApp:
 
             event_type = event.get("type")
             if event_type == "record":
-                live_id = extract_live_id(event["record"])
-                if live_id is not None:
-                    self.current_live_id = live_id
                 analysis = self.counter.process(
                     event["record"],
                     now=event["read_at"],
@@ -428,76 +322,11 @@ class EndVoteApp:
             elif event_type == "watch_error":
                 self._show_last_error(event["read_at"], "watch_error", event["error"])
                 self.action_var.set(f"監視エラー: {event['error']}")
-            elif event_type == "obs_test_result":
-                result = event["result"]
-                self.obs_connected = result.ok
-                self.obs_test_var.set(f"接続テスト結果: {result.message}")
-                self.obs_test_button.config(state="normal")
-            elif event_type == "obs_stop_result":
-                self._handle_obs_stop_result(event)
 
-        state = self._current_state()
+        state = self.counter.state()
         self._refresh_labels(state)
         self._write_state_if_changed(state)
         self.root.after(500, self._tick)
-
-    def _current_state(self) -> dict:
-        state = self.counter.state()
-        self.countdown.update(
-            threshold_met=state["threshold_met"],
-            live_id=self.current_live_id,
-        )
-        state.update(self.countdown.state())
-        state["obs_connected"] = self.obs_connected
-        state["stop_streaming_enabled"] = self._stop_streaming_effective()
-        return state
-
-    def _test_obs_connection(self) -> None:
-        if not self.config.obs_websocket_enabled:
-            self.obs_test_var.set(
-                "接続テスト結果: OBS連携がOFFです（config.jsonのobs_websocket_enabled）"
-            )
-            return
-        self.obs_test_button.config(state="disabled")
-        self.obs_test_var.set("接続テスト結果: 接続中…")
-
-        def worker() -> None:
-            result = self.obs.test_connection()
-            self.event_queue.put({"type": "obs_test_result", "result": result})
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _begin_obs_stop(self) -> None:
-        """カウントダウン完走時にのみCountdownControllerから呼ばれる。"""
-
-        def worker() -> None:
-            try:
-                message = self.obs.stop_streaming()
-                self.event_queue.put(
-                    {"type": "obs_stop_result", "ok": True, "message": message}
-                )
-            except ObsControlError as exc:
-                self.event_queue.put(
-                    {"type": "obs_stop_result", "ok": False, "error": str(exc)}
-                )
-            except Exception as exc:
-                self.event_queue.put(
-                    {"type": "obs_stop_result", "ok": False, "error": str(exc)}
-                )
-
-        threading.Thread(target=worker, daemon=True).start()
-
-    def _handle_obs_stop_result(self, event: dict) -> None:
-        if event["ok"]:
-            self.obs_connected = True
-            self.countdown.report_stop_success()
-            self.obs_test_var.set(f"接続テスト結果: {event['message']}")
-        else:
-            self.obs_connected = False
-            self.countdown.report_stop_failure(event["error"])
-            self.obs_test_var.set(f"接続テスト結果: {event['error']}")
-        self._write_state()
-        self._refresh_labels()
 
     def _show_last_analysis(self, read_at: float, analysis: VoteAnalysis) -> None:
         self.last_read_var.set(f"最後に読んだ時刻: {_format_time(read_at)}")
@@ -519,64 +348,16 @@ class EndVoteApp:
 
     def _refresh_labels(self, state: dict | None = None) -> None:
         if state is None:
-            state = self._current_state()
+            state = self.counter.state()
         end_rate_percent = int(round(state["end_rate"] * 100))
         self.counts_var.set(
             f"終了 {state['end_votes']} / 続行 {state['continue_votes']} / 有効 {state['valid_votes']}"
         )
         self.rate_var.set(f"終了率 {end_rate_percent}%")
         self.visible_var.set(f"OBS表示: {'ON' if state['visible'] else 'OFF'}")
-        self._refresh_countdown_labels(state)
-
-    def _refresh_countdown_labels(self, state: dict) -> None:
-        mode = state.get("mode", "normal")
-        if mode == MODE_COUNTDOWN:
-            remaining = state.get("countdown_remaining", 0)
-            if state.get("stop_streaming_enabled"):
-                self.countdown_var.set(
-                    f"終了ライン到達：{remaining}秒後にOBSの配信を停止します"
-                )
-            else:
-                self.countdown_var.set(
-                    f"終了ライン到達：{remaining}秒後に配信終了予定（停止OFF・表示のみ）"
-                )
-        elif mode == MODE_CANCELLED:
-            self.countdown_var.set("カウントダウン: キャンセルされました")
-        elif mode == MODE_WOULD_STOP:
-            self.countdown_var.set(
-                "ここで停止予定です（OBS停止はOFFのため停止しません）"
-            )
-        elif mode == MODE_STOPPING:
-            self.countdown_var.set("OBSへ停止要求中…")
-        elif mode == MODE_STOPPED:
-            self.countdown_var.set("配信停止を実行しました")
-        elif mode == MODE_STOP_FAILED:
-            error = state.get("stop_error") or "原因不明"
-            self.countdown_var.set(f"配信停止に失敗しました: {error}")
-        else:
-            self.countdown_var.set("カウントダウン: なし（終了ライン未到達）")
-        self.cancel_countdown_button.config(
-            state="normal" if state.get("can_cancel") else "disabled"
-        )
-
-    def _refresh_obs_static_labels(self) -> None:
-        if self.config.obs_websocket_enabled:
-            self.obs_link_var.set(
-                f"OBS連携: ON（{self.config.obs_host}:{self.config.obs_port}）"
-            )
-        else:
-            self.obs_link_var.set("OBS連携: OFF")
-        if self._stop_streaming_effective():
-            self.obs_stop_var.set("OBS停止: ON（カウントダウン後に停止します）")
-        elif self.config.stop_streaming_enabled:
-            self.obs_stop_var.set(
-                "OBS停止: OFF（obs_websocket_enabledがOFFのため停止しません）"
-            )
-        else:
-            self.obs_stop_var.set("OBS停止: OFF（表示のみ）")
 
     def _write_state(self) -> None:
-        state = self._current_state()
+        state = self.counter.state()
         write_overlay_state(self.config.overlay_state_path, state)
         self.last_overlay_snapshot = _state_snapshot(state)
 
@@ -592,14 +373,8 @@ class EndVoteApp:
         self._write_state()
         self._refresh_labels()
 
-    def _cancel_countdown(self) -> None:
-        if self.countdown.cancel():
-            self._write_state()
-            self._refresh_labels()
-
     def _reset(self) -> None:
         self.counter.reset()
-        self.countdown.reset()
         self._write_state()
         self._refresh_labels()
 
@@ -618,21 +393,8 @@ def replay_sample(config_path: Path) -> None:
     )
     for record in read_jsonl(config.log_file_path):
         counter.ingest(record)
+    write_overlay_state(config.overlay_state_path, counter.state())
     state = counter.state()
-    # replay時はカウントダウンを発動させず、normal状態の欄だけ埋める。
-    state.update(
-        {
-            "mode": "normal",
-            "countdown_remaining": 0,
-            "countdown_started_at": None,
-            "can_cancel": False,
-            "obs_connected": None,
-            "stop_streaming_enabled": False,
-            "stop_result": None,
-            "stop_error": None,
-        }
-    )
-    write_overlay_state(config.overlay_state_path, state)
     print(
         f"end={state['end_votes']} continue={state['continue_votes']} "
         f"valid={state['valid_votes']} rate={state['end_rate']:.2f}"
