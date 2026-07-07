@@ -22,6 +22,13 @@ from .countdown import (
 from .log_discovery import LogCandidate, find_onecomme_log_candidates
 from .log_reader import read_jsonl, tail_jsonl
 from .obs_control import ObsControlError, ObsController
+from .obs_settings import (
+    STOP_STREAMING_CONFIRMATION,
+    ObsSettings,
+    save_obs_settings,
+    test_obs_connection_from_settings,
+    validate_obs_port,
+)
 from .overlay import write_overlay_state
 from .vote import VoteAnalysis, VoteCounter, extract_live_id
 
@@ -204,6 +211,12 @@ class EndVoteApp:
             text="OBS表示 ON/OFF",
             width=16,
             command=self._toggle_visible,
+        ).pack(side="left", padx=(0, 8))
+        tk.Button(
+            button_row,
+            text="OBS設定",
+            width=10,
+            command=self._open_obs_settings,
         ).pack(side="left", padx=(0, 8))
         tk.Button(button_row, text="投票をリセット", width=14, command=self._reset).pack(
             side="left", padx=(0, 8)
@@ -466,6 +479,147 @@ class EndVoteApp:
             self.event_queue.put({"type": "obs_test_result", "result": result})
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _open_obs_settings(self) -> None:
+        dialog = tk.Toplevel(self.root)
+        dialog.title("OBS設定")
+        dialog.geometry("520x360")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+
+        obs_enabled_var = tk.BooleanVar(value=self.config.obs_websocket_enabled)
+        stop_enabled_var = tk.BooleanVar(value=self.config.stop_streaming_enabled)
+        host_var = tk.StringVar(value=self.config.obs_host or "127.0.0.1")
+        port_var = tk.StringVar(value=str(self.config.obs_port or 4455))
+        password_var = tk.StringVar(value=self.config.obs_password)
+        status_var = tk.StringVar(value="OBS停止は通常OFFのまま使ってください。")
+
+        frame = tk.Frame(dialog, padx=18, pady=16)
+        frame.pack(fill="both", expand=True)
+
+        def on_stop_toggle() -> None:
+            if not stop_enabled_var.get():
+                return
+            confirmed = messagebox.askokcancel(
+                "OBS停止を有効にする確認",
+                STOP_STREAMING_CONFIRMATION,
+                parent=dialog,
+            )
+            if not confirmed:
+                stop_enabled_var.set(False)
+
+        tk.Checkbutton(
+            frame,
+            text="OBS連携を有効にする",
+            variable=obs_enabled_var,
+        ).pack(anchor="w")
+        tk.Checkbutton(
+            frame,
+            text="OBS停止を有効にする",
+            variable=stop_enabled_var,
+            command=on_stop_toggle,
+        ).pack(anchor="w", pady=(4, 12))
+
+        form = tk.Frame(frame)
+        form.pack(fill="x")
+        tk.Label(form, text="OBSホスト", width=14, anchor="w").grid(
+            row=0, column=0, sticky="w", pady=4
+        )
+        tk.Entry(form, textvariable=host_var, width=34).grid(
+            row=0, column=1, sticky="we", pady=4
+        )
+        tk.Label(form, text="OBSポート", width=14, anchor="w").grid(
+            row=1, column=0, sticky="w", pady=4
+        )
+        tk.Entry(form, textvariable=port_var, width=34).grid(
+            row=1, column=1, sticky="we", pady=4
+        )
+        tk.Label(form, text="OBSパスワード", width=14, anchor="w").grid(
+            row=2, column=0, sticky="w", pady=4
+        )
+        tk.Entry(form, textvariable=password_var, width=34, show="*").grid(
+            row=2, column=1, sticky="we", pady=4
+        )
+        form.columnconfigure(1, weight=1)
+
+        status_label = tk.Label(
+            frame,
+            textvariable=status_var,
+            fg="#374151",
+            anchor="w",
+            justify="left",
+            wraplength=470,
+        )
+        status_label.pack(fill="x", pady=(14, 10))
+
+        def collect_settings() -> ObsSettings | None:
+            try:
+                port = validate_obs_port(port_var.get())
+            except ValueError as exc:
+                status_var.set(str(exc))
+                messagebox.showerror("OBS設定", str(exc), parent=dialog)
+                return None
+            return ObsSettings(
+                obs_websocket_enabled=bool(obs_enabled_var.get()),
+                stop_streaming_enabled=bool(stop_enabled_var.get()),
+                obs_host=host_var.get().strip() or "127.0.0.1",
+                obs_port=port,
+                obs_password=password_var.get(),
+            )
+
+        def test_connection() -> None:
+            settings = collect_settings()
+            if settings is None:
+                return
+            if not settings.obs_websocket_enabled:
+                status_var.set("OBS連携がOFFです")
+                return
+            status_var.set("OBSへ接続テスト中です...")
+            test_button.config(state="disabled")
+
+            def worker() -> None:
+                result = test_obs_connection_from_settings(settings)
+
+                def finish() -> None:
+                    if not status_label.winfo_exists():
+                        return
+                    status_var.set(result.message)
+                    test_button.config(state="normal")
+
+                self.root.after(0, finish)
+
+            threading.Thread(target=worker, daemon=True).start()
+
+        def save() -> None:
+            settings = collect_settings()
+            if settings is None:
+                return
+            save_obs_settings(self.config_path, settings)
+            self.config = load_config(self.config_path)
+            self.obs = self._create_obs_controller()
+            self.countdown = self._create_countdown()
+            self.obs_connected = None
+            self._refresh_obs_static_labels()
+            self._write_state()
+            self._refresh_labels()
+            status_var.set("保存しました。設定を反映しました。")
+            messagebox.showinfo("OBS設定", "保存しました。設定を反映しました。", parent=dialog)
+
+        button_row = tk.Frame(frame)
+        button_row.pack(anchor="e", pady=(8, 0))
+        test_button = tk.Button(
+            button_row,
+            text="OBS接続テスト",
+            width=16,
+            command=test_connection,
+        )
+        test_button.pack(side="left", padx=(0, 8))
+        tk.Button(button_row, text="保存", width=10, command=save).pack(
+            side="left", padx=(0, 8)
+        )
+        tk.Button(button_row, text="キャンセル", width=10, command=dialog.destroy).pack(
+            side="left"
+        )
 
     def _begin_obs_stop(self) -> None:
         """カウントダウン完走時にのみCountdownControllerから呼ばれる。"""

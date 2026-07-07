@@ -30,7 +30,7 @@ if errorlevel 1 goto error
 
 echo.
 echo [4/4] Building exe...
-python -m PyInstaller --clean --noconfirm --onefile --windowed --name amemiya-end-vote --paths "%~dp0src" --collect-submodules end_vote --hidden-import end_vote.app --hidden-import end_vote.config --hidden-import end_vote.vote --hidden-import end_vote.log_reader --hidden-import end_vote.log_discovery --hidden-import end_vote.overlay --hidden-import end_vote.countdown --hidden-import end_vote.obs_control run.py
+python -m PyInstaller --clean --noconfirm --onefile --windowed --name amemiya-end-vote --paths "%~dp0src" --collect-submodules end_vote --hidden-import end_vote.app --hidden-import end_vote.config --hidden-import end_vote.vote --hidden-import end_vote.log_reader --hidden-import end_vote.log_discovery --hidden-import end_vote.overlay --hidden-import end_vote.countdown --hidden-import end_vote.obs_control --hidden-import end_vote.obs_settings run.py
 if errorlevel 1 goto error
 
 echo.
@@ -47,7 +47,7 @@ echo Output:
 echo release
 echo ????????_v0.4.zip
 echo.
-pause
+if not "%CI%"=="1" pause
 exit /b 0
 
 :error
@@ -56,5 +56,5 @@ echo ========================================
 echo Build failed.
 echo ========================================
 echo.
-pause
+if not "%CI%"=="1" pause
 exit /b 1

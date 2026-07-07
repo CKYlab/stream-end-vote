@@ -24,6 +24,7 @@ FORBIDDEN_RELEASE_TEXT = [
     "CodexTest",
     "C:\\Users",
     "D:\\",
+    "v0.3.5",
 ]
 
 
@@ -110,10 +111,19 @@ def verify_release_contents() -> None:
 
 
 def verify_no_private_text() -> None:
+    text_suffixes = {".json", ".txt", ".html", ".md"}
+
     for path in RELEASE.iterdir():
-        if path.suffix.lower() not in {".json", ".txt", ".html"}:
+        if not path.is_file():
             continue
-        text = path.read_text(encoding="utf-8", errors="replace")
+
+        # PyInstaller製exeにはビルド時のパス断片が混ざることがあるので、
+        # 配布者が直接読むテキスト系ファイルだけ検査する。
+        if path.suffix.lower() not in text_suffixes:
+            continue
+
+        text = path.read_text(encoding="utf-8", errors="ignore")
+
         for forbidden in FORBIDDEN_RELEASE_TEXT:
             if forbidden in text:
                 raise RuntimeError(

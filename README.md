@@ -8,13 +8,15 @@
 
 - **v0.4でも初期状態では配信は自動停止しません。**
 - `stop_streaming_enabled`と`obs_websocket_enabled`の初期値はどちらも`false`です。
-- 本当にOBSを停止させるには、`config.json`を手で編集して**両方**を`true`にする必要があります。GUIのボタンからはONにできません（誤操作防止）。
+- 本当にOBSを停止させるには、GUIの「OBS設定」画面で`OBS連携`と`OBS停止`をONにします。
+- `OBS停止`をONにする時は確認ダイアログを必ず出します。必ず配信外でテストしてください。
 - どちらかが`false`の間は、カウントダウンが最後まで進んでも`would_stop`表示（「ここで停止予定です / OBS停止はOFFです」）だけで、OBSには一切接続しません。
 - 停止はカウントダウン完走時のみ発動します。カウントダウンなしで即停止する経路はありません。
 - GUIの「カウントダウンをキャンセル」ボタンでカウントダウン中に止められます。
 - チャットコメントから停止やキャンセルはできません。操作はローカルGUIのみです。
 - OBS接続に失敗してもアプリは落ちません。GUIとoverlayにエラーを表示して`stop_failed`になります。
 - `trigger_once_per_live=true`なら同じ`liveId`では原則1回だけ発動します。
+- 過去版の`v0.3.5-fixed`は、投票結果とカウントダウンを表示するだけの安全版です。
 
 ## OBS側の設定（開発者向け）
 
@@ -25,7 +27,7 @@ OBSの配信停止を検証する場合のみ必要です。
 3. ポートは既定で`4455`
 4. 「認証を有効にする」がONの場合は「サーバーパスワード」を控える
 
-その後、`config.json`を編集します。
+その後、アプリの「OBS設定」画面で設定します。
 
 ```json
 {
@@ -41,7 +43,7 @@ OBSの配信停止を検証する場合のみ必要です。
 - `obs_host` / `obs_port` / `obs_password`: obs-websocketの接続先（初期値`127.0.0.1` / `4455` / 空）
 - `stop_streaming_enabled`: カウントダウン完走時に本当にStopStreamを送るか（初期値`false`）
 
-GUIの「OBS接続テスト」ボタンで、接続成功／パスワード違い／接続不可を確認できます。接続テストは`obs_websocket_enabled=true`のときだけ動きます。
+GUIの「OBS設定」画面にある「OBS接続テスト」ボタンで、接続成功／パスワード違い／接続不可を確認できます。接続テストは`obs_websocket_enabled=true`のときだけ動きます。
 
 ## カウントダウンの状態遷移
 
@@ -57,7 +59,7 @@ GUIの「OBS接続テスト」ボタンで、接続成功／パスワード違�
 
 あわせて`countdown_remaining` / `countdown_started_at` / `can_cancel` / `obs_connected` / `stop_streaming_enabled` / `stop_result` / `stop_error`が書き出され、`overlay.html`がOBS上に表示します。
 
-## v0.3.5で追加したconfig.jsonの設定
+## カウントダウン関連のconfig.json設定
 
 - `countdown_enabled`: 終了ライン到達時にカウントダウン表示をするか（既定: `true`）
 - `countdown_seconds`: カウントダウン秒数（既定: `30`）
@@ -132,7 +134,7 @@ python -m unittest discover -s tests
 `make_release.py`はrelease用の`config.json`と`overlay_state.json`を初期状態で作り直します。念のため、配布前に以下を実行して、`.json` / `.txt` / `.html`に開発者環境の文字列が残っていないことを確認します。
 
 ```powershell
-Select-String -Path release\*.json,release\*.txt,release\*.html -Pattern "CHiKA","ちか","CodexTest","C:\Users","D:\" -SimpleMatch
+Select-String -Path release\*.json,release\*.txt,release\*.html -Pattern "CHiKA","ちか","CodexTest","C:\Users","D:\","v0.3.5" -SimpleMatch
 ```
 
 何も表示されなければOKです。
