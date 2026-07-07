@@ -8,7 +8,7 @@
   "end_rate_threshold": 0.7,
   "threshold_met": false,
   "window_seconds": 180,
-  "updated_at": "2026-07-07T14:21:06.869933+00:00",
+  "updated_at": "",
   "mode": "normal",
   "countdown_remaining": 0,
   "countdown_started_at": null,
