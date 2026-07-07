@@ -10,5 +10,9 @@
     "kick",
     "twitch"
   ],
-  "read_existing_log_on_start": false
+  "read_existing_log_on_start": false,
+  "countdown_enabled": true,
+  "countdown_seconds": 30,
+  "trigger_once_per_live": true,
+  "stop_streaming_enabled": false
 }

@@ -10,10 +10,16 @@ from pathlib import Path
 from tkinter import filedialog, messagebox
 
 from .config import DEFAULT_CONFIG_PATH, load_config, update_config
+from .countdown import (
+    MODE_CANCELLED,
+    MODE_COUNTDOWN,
+    MODE_WOULD_STOP,
+    CountdownController,
+)
 from .log_discovery import LogCandidate, find_onecomme_log_candidates
 from .log_reader import read_jsonl, tail_jsonl
 from .overlay import write_overlay_state
-from .vote import VoteAnalysis, VoteCounter
+from .vote import VoteAnalysis, VoteCounter, extract_live_id
 
 
 class EndVoteApp:
@@ -22,19 +28,22 @@ class EndVoteApp:
         self.config_path = config_path
         self.config = load_config(config_path)
         self.counter = self._create_counter()
+        self.countdown = self._create_countdown()
+        self.current_live_id: str | None = None
         self.event_queue: queue.Queue[dict] = queue.Queue()
         self.stop_event = threading.Event()
         self.worker: threading.Thread | None = None
         self.last_overlay_snapshot: dict | None = None
 
-        self.root.title("Amemiya End Vote v0.1")
-        self.root.geometry("780x560")
+        self.root.title("Amemiya End Vote v0.3.5")
+        self.root.geometry("780x620")
         self.root.resizable(False, False)
 
         self.action_var = tk.StringVar(value="今やること：わんコメログを自動で探してください")
         self.counts_var = tk.StringVar(value="終了 0 / 続行 0 / 有効 0")
         self.rate_var = tk.StringVar(value="終了率 0%")
         self.visible_var = tk.StringVar(value="OBS表示: ON")
+        self.countdown_var = tk.StringVar(value="カウントダウン: なし")
         self.log_path_var = tk.StringVar(value=f"ログ: {self.config.log_file_path}")
         self.last_read_var = tk.StringVar(value="最後に読んだ時刻: -")
         self.last_service_var = tk.StringVar(value="service: -")
@@ -55,6 +64,15 @@ class EndVoteApp:
             minimum_votes=self.config.minimum_votes,
             end_rate_threshold=self.config.end_rate_threshold,
             supported_services=self.config.supported_services,
+        )
+
+    def _create_countdown(self) -> CountdownController:
+        # v0.3.5: on_stop_intent は渡さない。停止処理は存在しない。
+        return CountdownController(
+            enabled=self.config.countdown_enabled,
+            countdown_seconds=self.config.countdown_seconds,
+            trigger_once_per_live=self.config.trigger_once_per_live,
+            stop_streaming_enabled=self.config.stop_streaming_enabled,
         )
 
     def _build_ui(self) -> None:
@@ -82,6 +100,27 @@ class EndVoteApp:
         tk.Label(frame, textvariable=self.visible_var, fg="#4b5563").pack(
             anchor="w", pady=(0, 14)
         )
+
+        countdown_frame = tk.LabelFrame(
+            frame, text="配信終了カウントダウン（v0.3.5では停止しません）", padx=12, pady=8
+        )
+        countdown_frame.pack(fill="x", pady=(0, 6))
+        tk.Label(
+            countdown_frame,
+            textvariable=self.countdown_var,
+            font=("Yu Gothic UI", 13, "bold"),
+            anchor="w",
+            justify="left",
+            wraplength=680,
+        ).pack(fill="x", anchor="w")
+        self.cancel_countdown_button = tk.Button(
+            countdown_frame,
+            text="カウントダウンをキャンセル",
+            width=24,
+            state="disabled",
+            command=self._cancel_countdown,
+        )
+        self.cancel_countdown_button.pack(anchor="w", pady=(6, 0))
 
         log_button_row = tk.Frame(frame)
         log_button_row.pack(anchor="w", pady=(6, 0))
@@ -285,6 +324,8 @@ class EndVoteApp:
         self.config = load_config(self.config_path)
         self.log_path_var.set(f"ログ: {self.config.log_file_path}")
         self.counter.reset()
+        self.countdown = self._create_countdown()
+        self.current_live_id = None
         self._write_state()
         self._refresh_labels()
         self._start_tail()
@@ -309,6 +350,9 @@ class EndVoteApp:
 
             event_type = event.get("type")
             if event_type == "record":
+                live_id = extract_live_id(event["record"])
+                if live_id is not None:
+                    self.current_live_id = live_id
                 analysis = self.counter.process(
                     event["record"],
                     now=event["read_at"],
@@ -323,10 +367,19 @@ class EndVoteApp:
                 self._show_last_error(event["read_at"], "watch_error", event["error"])
                 self.action_var.set(f"監視エラー: {event['error']}")
 
-        state = self.counter.state()
+        state = self._current_state()
         self._refresh_labels(state)
         self._write_state_if_changed(state)
         self.root.after(500, self._tick)
+
+    def _current_state(self) -> dict:
+        state = self.counter.state()
+        self.countdown.update(
+            threshold_met=state["threshold_met"],
+            live_id=self.current_live_id,
+        )
+        state.update(self.countdown.state())
+        return state
 
     def _show_last_analysis(self, read_at: float, analysis: VoteAnalysis) -> None:
         self.last_read_var.set(f"最後に読んだ時刻: {_format_time(read_at)}")
@@ -348,16 +401,36 @@ class EndVoteApp:
 
     def _refresh_labels(self, state: dict | None = None) -> None:
         if state is None:
-            state = self.counter.state()
+            state = self._current_state()
         end_rate_percent = int(round(state["end_rate"] * 100))
         self.counts_var.set(
             f"終了 {state['end_votes']} / 続行 {state['continue_votes']} / 有効 {state['valid_votes']}"
         )
         self.rate_var.set(f"終了率 {end_rate_percent}%")
         self.visible_var.set(f"OBS表示: {'ON' if state['visible'] else 'OFF'}")
+        self._refresh_countdown_labels(state)
+
+    def _refresh_countdown_labels(self, state: dict) -> None:
+        mode = state.get("mode", "normal")
+        if mode == MODE_COUNTDOWN:
+            remaining = state.get("countdown_remaining", 0)
+            self.countdown_var.set(
+                f"終了ライン到達：{remaining}秒後に配信終了予定（v0.3.5では停止しません）"
+            )
+        elif mode == MODE_CANCELLED:
+            self.countdown_var.set("カウントダウン: キャンセルされました")
+        elif mode == MODE_WOULD_STOP:
+            self.countdown_var.set(
+                "v0.3.5ではここで停止予定です（実際には停止しません）"
+            )
+        else:
+            self.countdown_var.set("カウントダウン: なし（終了ライン未到達）")
+        self.cancel_countdown_button.config(
+            state="normal" if state.get("can_cancel") else "disabled"
+        )
 
     def _write_state(self) -> None:
-        state = self.counter.state()
+        state = self._current_state()
         write_overlay_state(self.config.overlay_state_path, state)
         self.last_overlay_snapshot = _state_snapshot(state)
 
@@ -373,8 +446,14 @@ class EndVoteApp:
         self._write_state()
         self._refresh_labels()
 
+    def _cancel_countdown(self) -> None:
+        if self.countdown.cancel():
+            self._write_state()
+            self._refresh_labels()
+
     def _reset(self) -> None:
         self.counter.reset()
+        self.countdown.reset()
         self._write_state()
         self._refresh_labels()
 
@@ -393,8 +472,17 @@ def replay_sample(config_path: Path) -> None:
     )
     for record in read_jsonl(config.log_file_path):
         counter.ingest(record)
-    write_overlay_state(config.overlay_state_path, counter.state())
     state = counter.state()
+    # replay時はカウントダウンを発動させず、normal状態の欄だけ埋める。
+    state.update(
+        {
+            "mode": "normal",
+            "countdown_remaining": 0,
+            "countdown_started_at": None,
+            "can_cancel": False,
+        }
+    )
+    write_overlay_state(config.overlay_state_path, state)
     print(
         f"end={state['end_votes']} continue={state['continue_votes']} "
         f"valid={state['valid_votes']} rate={state['end_rate']:.2f}"

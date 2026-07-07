@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from pathlib import Path
 import shutil
 import zipfile
@@ -7,7 +8,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 RELEASE = ROOT / "release"
-ZIP_PATH = ROOT / "配信終了投票くん_v0.1.zip"
+ZIP_PATH = ROOT / "配信終了投票くん_v0.3.5.zip"
 
 EXPECTED_RELEASE_NAMES = [
     "01_最初に読む_使い方.txt",
@@ -17,38 +18,105 @@ EXPECTED_RELEASE_NAMES = [
     "overlay_state.json",
 ]
 
+FORBIDDEN_RELEASE_TEXT = [
+    "CHiKA",
+    "ちか",
+    "CodexTest",
+    "C:\\Users",
+    "D:\\",
+]
+
 
 def main() -> None:
     if RELEASE.exists():
         shutil.rmtree(RELEASE)
     RELEASE.mkdir()
 
-    files = [
+    copied_files = [
         (ROOT / "01_最初に読む_使い方.txt", RELEASE / EXPECTED_RELEASE_NAMES[0]),
         (ROOT / "dist" / "amemiya-end-vote.exe", RELEASE / EXPECTED_RELEASE_NAMES[1]),
         (ROOT / "overlay.html", RELEASE / EXPECTED_RELEASE_NAMES[2]),
-        (ROOT / "config.json", RELEASE / EXPECTED_RELEASE_NAMES[3]),
-        (ROOT / "overlay_state.json", RELEASE / EXPECTED_RELEASE_NAMES[4]),
     ]
 
-    for src, dst in files:
+    for src, dst in copied_files:
         if not src.exists():
             raise FileNotFoundError(f"Missing file: {src}")
         shutil.copy2(src, dst)
 
-    release_names = sorted(path.name for path in RELEASE.iterdir() if path.is_file())
-    expected_names = sorted(EXPECTED_RELEASE_NAMES)
-    if release_names != expected_names:
-        raise RuntimeError(f"Unexpected release contents: {release_names}")
-
-    with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as archive:
-        for name in EXPECTED_RELEASE_NAMES:
-            archive.write(RELEASE / name, arcname=name)
+    write_release_config(RELEASE / "config.json")
+    write_release_overlay_state(RELEASE / "overlay_state.json")
+    verify_release_contents()
+    verify_no_private_text()
+    write_release_zip()
 
     print("release folder created:")
     print(RELEASE)
     print("zip created:")
     print(ZIP_PATH)
+
+
+def write_release_config(path: Path) -> None:
+    source_path = ROOT / "config.json"
+    if not source_path.exists():
+        raise FileNotFoundError(f"Missing file: {source_path}")
+
+    config = json.loads(source_path.read_text(encoding="utf-8"))
+    config["log_file_path"] = ""
+    config["overlay_state_path"] = "overlay_state.json"
+    # v0.3.5: 停止処理は存在しないが、配布物では必ずfalseにしておく。
+    config["stop_streaming_enabled"] = False
+    path.write_text(
+        json.dumps(config, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def write_release_overlay_state(path: Path) -> None:
+    state = {
+        "visible": True,
+        "end_votes": 0,
+        "continue_votes": 0,
+        "end_rate": 0,
+        "valid_votes": 0,
+        "minimum_votes": 20,
+        "end_rate_threshold": 0.7,
+        "threshold_met": False,
+        "window_seconds": 180,
+        "updated_at": "",
+        "mode": "normal",
+        "countdown_remaining": 0,
+        "countdown_started_at": None,
+        "can_cancel": False,
+    }
+    path.write_text(
+        json.dumps(state, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+
+
+def verify_release_contents() -> None:
+    release_names = sorted(path.name for path in RELEASE.iterdir() if path.is_file())
+    expected_names = sorted(EXPECTED_RELEASE_NAMES)
+    if release_names != expected_names:
+        raise RuntimeError(f"Unexpected release contents: {release_names}")
+
+
+def verify_no_private_text() -> None:
+    for path in RELEASE.iterdir():
+        if path.suffix.lower() not in {".json", ".txt", ".html"}:
+            continue
+        text = path.read_text(encoding="utf-8", errors="replace")
+        for forbidden in FORBIDDEN_RELEASE_TEXT:
+            if forbidden in text:
+                raise RuntimeError(
+                    f"Private text found in {path.name}: {forbidden}"
+                )
+
+
+def write_release_zip() -> None:
+    with zipfile.ZipFile(ZIP_PATH, "w", zipfile.ZIP_DEFLATED) as archive:
+        for name in EXPECTED_RELEASE_NAMES:
+            archive.write(RELEASE / name, arcname=name)
 
 
 if __name__ == "__main__":

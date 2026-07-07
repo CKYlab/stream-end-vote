@@ -19,6 +19,10 @@ class AppConfig:
     poll_interval_seconds: float
     supported_services: tuple[str, ...]
     read_existing_log_on_start: bool
+    countdown_enabled: bool
+    countdown_seconds: int
+    trigger_once_per_live: bool
+    stop_streaming_enabled: bool
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
@@ -30,6 +34,11 @@ DEFAULT_CONFIG: dict[str, Any] = {
     "poll_interval_seconds": 0.5,
     "supported_services": ["twicas", "kick", "twitch"],
     "read_existing_log_on_start": False,
+    "countdown_enabled": True,
+    "countdown_seconds": 30,
+    "trigger_once_per_live": True,
+    # v0.3.5では停止処理そのものが存在しないため、このフラグは常にfalse運用。
+    "stop_streaming_enabled": False,
 }
 
 
@@ -73,4 +82,8 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         poll_interval_seconds=float(merged["poll_interval_seconds"]),
         supported_services=tuple(str(item).lower() for item in merged["supported_services"]),
         read_existing_log_on_start=bool(merged["read_existing_log_on_start"]),
+        countdown_enabled=bool(merged["countdown_enabled"]),
+        countdown_seconds=int(merged["countdown_seconds"]),
+        trigger_once_per_live=bool(merged["trigger_once_per_live"]),
+        stop_streaming_enabled=bool(merged["stop_streaming_enabled"]),
     )

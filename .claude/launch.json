@@ -1,0 +1,12 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "overlay",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "8899"],
+      "port": 8899,
+      "autoPort": false
+    }
+  ]
+}

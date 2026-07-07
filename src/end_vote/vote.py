@@ -79,6 +79,17 @@ def normalize_service(value: str) -> str:
     return aliases.get(normalized, normalized)
 
 
+def extract_live_id(record: dict[str, Any]) -> str | None:
+    data = _dict_value(record, "data")
+    live_id = (
+        _string_value(data, "liveId")
+        or _string_value(data, "live_id")
+        or _string_value(record, "liveId")
+        or _string_value(record, "live_id")
+    )
+    return live_id or None
+
+
 def extract_timestamp(record: dict[str, Any], now: float | None = None) -> float:
     data = _dict_value(record, "data")
     for source in (data, record):

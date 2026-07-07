@@ -8,5 +8,9 @@
   "end_rate_threshold": 0.7,
   "threshold_met": false,
   "window_seconds": 180,
-  "updated_at": ""
+  "updated_at": "",
+  "mode": "normal",
+  "countdown_remaining": 0,
+  "countdown_started_at": null,
+  "can_cancel": false
 }

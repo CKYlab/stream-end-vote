@@ -5,7 +5,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ========================================
-echo Build amemiya-end-vote v0.1
+echo Build amemiya-end-vote v0.3.5
 echo ========================================
 echo.
 
@@ -48,3 +48,4 @@ echo Build failed.
 echo ========================================
 echo.
 exit /b 1
+
