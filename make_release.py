@@ -8,7 +8,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 RELEASE = ROOT / "release"
-ZIP_PATH = ROOT / "配信終了投票くん_v0.4.zip"
+ZIP_PATH = ROOT / "配信終了投票くん_v0.5.zip"
 
 EXPECTED_RELEASE_NAMES = [
     "01_最初に読む_使い方.txt",
@@ -78,7 +78,8 @@ def write_release_config(path: Path) -> None:
 
 def write_release_overlay_state(path: Path) -> None:
     state = {
-        "visible": True,
+        "visible": False,
+        "display_enabled": True,
         "end_votes": 0,
         "continue_votes": 0,
         "end_rate": 0,

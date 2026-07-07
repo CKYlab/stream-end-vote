@@ -1,5 +1,6 @@
 {
-  "visible": true,
+  "visible": false,
+  "display_enabled": true,
   "end_votes": 0,
   "continue_votes": 0,
   "end_rate": 0.0,

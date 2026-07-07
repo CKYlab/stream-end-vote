@@ -2,11 +2,11 @@
 
 これは開発用です。雨宮さんに渡すものではありません。
 
-雨宮さんに渡すのは、`build_exe.bat`で作られる`release`フォルダの中身、または`配信終了投票くん_v0.4.zip`だけです。
+雨宮さんに渡すのは、`build_exe.bat`で作られる`release`フォルダの中身、または`配信終了投票くん_v0.5.zip`だけです。
 
-## v0.4の重要な注意（安全仕様）
+## v0.5の重要な注意（安全仕様）
 
-- **v0.4でも初期状態では配信は自動停止しません。**
+- **v0.5でも初期状態では配信は自動停止しません。**
 - `stop_streaming_enabled`と`obs_websocket_enabled`の初期値はどちらも`false`です。
 - 本当にOBSを停止させるには、GUIの「OBS設定」画面で`OBS連携`と`OBS停止`をONにします。
 - `OBS停止`をONにする時は確認ダイアログを必ず出します。必ず配信外でテストしてください。
@@ -17,6 +17,7 @@
 - OBS接続に失敗してもアプリは落ちません。GUIとoverlayにエラーを表示して`stop_failed`になります。
 - `trigger_once_per_live=true`なら同じ`liveId`では原則1回だけ発動します。
 - 過去版の`v0.3.5-fixed`は、投票結果とカウントダウンを表示するだけの安全版です。
+- v0.5候補では、OBSブラウザソースは入れっぱなしでOKです。普段は透明で表示されず、投票コマンドが来た時だけ投票パネルが表示されます。
 
 ## OBS側の設定（開発者向け）
 
@@ -59,7 +60,7 @@ GUIの「OBS設定」画面にある「OBS接続テスト」ボタンで、接�
 - `stopped`: StopStream成功。「配信停止を実行しました」
 - `stop_failed`: StopStream失敗。エラー理由を表示（アプリは落ちない）
 
-あわせて`countdown_remaining` / `countdown_started_at` / `can_cancel` / `obs_connected` / `stop_streaming_enabled` / `stop_result` / `stop_error`が書き出され、`overlay.html`がOBS上に表示します。
+あわせて`visible` / `display_enabled` / `countdown_remaining` / `countdown_started_at` / `can_cancel` / `obs_connected` / `stop_streaming_enabled` / `stop_result` / `stop_error`が書き出され、`overlay.html`がOBS上に表示します。`display_enabled=true`は「必要時に表示してよい」、`visible=true`は「今OBSに表示する」という意味です。
 
 ## カウントダウン関連のconfig.json設定
 
@@ -118,8 +119,8 @@ python -m unittest discover -s tests
 
 1. `build_exe.bat`を実行する
 2. `release`フォルダが作られる
-3. `配信終了投票くん_v0.4.zip`が作られる
-4. 雨宮さんに渡すのは`release`フォルダの中身、または`配信終了投票くん_v0.4.zip`だけ
+3. `配信終了投票くん_v0.5.zip`が作られる
+4. 雨宮さんに渡すのは`release`フォルダの中身、または`配信終了投票くん_v0.5.zip`だけ
 
 `release`フォルダには次の5ファイルだけが入ります。
 
@@ -147,6 +148,8 @@ Select-String -Path release\*.json,release\*.txt,release\*.html -Pattern "CHiKA"
 
 - 幅 1920 / 高さ 1080
 - または 幅 1280 / 高さ 720
+
+OBSブラウザソースは入れっぱなしでOKです。通常時は`overlay.html`が透明になり、何も表示しません。`!寝ろ` / `!終了` / `!続行` / `!まだ`などの投票コマンドが来た時だけ、`voting_window_seconds`の間だけ投票パネルを表示します。終了ライン到達時は、これまで通りカウントダウンを大きく表示します。
 
 カウントダウン大表示は`max-width: 90vw`と`clamp()`によるフォント調整で画面内に収まるため、800x600でも切れませんが、小さすぎると文字も小さくなります。投票メーターは右下固定表示のままです。
 

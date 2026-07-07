@@ -4,7 +4,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ========================================
-echo Build amemiya-end-vote v0.4
+echo Build amemiya-end-vote v0.5
 echo ========================================
 echo.
 
@@ -45,7 +45,7 @@ echo ========================================
 echo.
 echo Output:
 echo release
-echo ????????_v0.4.zip
+echo ????????_v0.5.zip
 echo.
 if not "%CI%"=="1" pause
 exit /b 0

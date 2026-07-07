@@ -13,6 +13,7 @@ from .config import DEFAULT_CONFIG_PATH, load_config, update_config
 from .countdown import (
     MODE_CANCELLED,
     MODE_COUNTDOWN,
+    MODE_NORMAL,
     MODE_STOP_FAILED,
     MODE_STOPPED,
     MODE_STOPPING,
@@ -47,8 +48,9 @@ class EndVoteApp:
         self.stop_event = threading.Event()
         self.worker: threading.Thread | None = None
         self.last_overlay_snapshot: dict | None = None
+        self.panel_suppressed_until_next_vote = False
 
-        self.root.title("Amemiya End Vote v0.4")
+        self.root.title("Amemiya End Vote v0.5")
         self.root.geometry("780x700")
         self.root.resizable(False, False)
 
@@ -433,6 +435,8 @@ class EndVoteApp:
                     now=event["read_at"],
                     use_record_timestamp=False,
                 )
+                if analysis.result in {"end", "continue"}:
+                    self.panel_suppressed_until_next_vote = False
                 self._show_last_analysis(event["read_at"], analysis)
                 self.action_var.set("監視中：コメントを待っています")
             elif event_type == "parse_error":
@@ -463,6 +467,13 @@ class EndVoteApp:
         state.update(self.countdown.state())
         state["obs_connected"] = self.obs_connected
         state["stop_streaming_enabled"] = self._stop_streaming_effective()
+        state["display_enabled"] = bool(state["visible"])
+        state["visible"] = overlay_should_be_visible(
+            display_enabled=state["display_enabled"],
+            mode=str(state.get("mode", "normal")),
+            valid_votes=int(state["valid_votes"]),
+            panel_suppressed=self.panel_suppressed_until_next_vote,
+        )
         return state
 
     def _test_obs_connection(self) -> None:
@@ -690,7 +701,10 @@ class EndVoteApp:
             f"終了 {state['end_votes']} / 続行 {state['continue_votes']} / 有効 {state['valid_votes']}"
         )
         self.rate_var.set(f"終了率 {end_rate_percent}%")
-        self.visible_var.set(f"OBS表示: {'ON' if state['visible'] else 'OFF'}")
+        if state.get("display_enabled"):
+            self.visible_var.set("OBS表示: ON（必要時のみ表示）")
+        else:
+            self.visible_var.set("OBS表示: OFF")
         self._refresh_countdown_labels(state)
 
     def _refresh_countdown_labels(self, state: dict) -> None:
@@ -759,18 +773,36 @@ class EndVoteApp:
 
     def _cancel_countdown(self) -> None:
         if self.countdown.cancel():
+            self.panel_suppressed_until_next_vote = True
             self._write_state()
             self._refresh_labels()
 
     def _reset(self) -> None:
         self.counter.reset()
         self.countdown.reset()
+        self.panel_suppressed_until_next_vote = False
         self._write_state()
         self._refresh_labels()
 
     def _close(self) -> None:
         self._stop_worker()
         self.root.after(50, self.root.destroy)
+
+
+def overlay_should_be_visible(
+    *,
+    display_enabled: bool,
+    mode: str,
+    valid_votes: int,
+    panel_suppressed: bool = False,
+) -> bool:
+    if not display_enabled:
+        return False
+    if mode != MODE_NORMAL:
+        return True
+    if panel_suppressed:
+        return False
+    return valid_votes > 0
 
 
 def replay_sample(config_path: Path) -> None:
@@ -796,6 +828,12 @@ def replay_sample(config_path: Path) -> None:
             "stop_result": None,
             "stop_error": None,
         }
+    )
+    state["display_enabled"] = bool(state["visible"])
+    state["visible"] = overlay_should_be_visible(
+        display_enabled=state["display_enabled"],
+        mode=str(state.get("mode", "normal")),
+        valid_votes=int(state["valid_votes"]),
     )
     write_overlay_state(config.overlay_state_path, state)
     print(
