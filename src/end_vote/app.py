@@ -49,9 +49,12 @@ class EndVoteApp:
         self.worker: threading.Thread | None = None
         self.last_overlay_snapshot: dict | None = None
         self.panel_suppressed_until_next_vote = False
+        self.countdown_cancel_controls_active = False
+        self.countdown_shortcuts_bound = False
+        self.countdown_topmost_after_id: str | None = None
 
-        self.root.title("Amemiya End Vote v0.5")
-        self.root.geometry("780x700")
+        self.root.title("Amemiya End Vote v0.6")
+        self.root.geometry("780x780")
         self.root.resizable(False, False)
 
         self.action_var = tk.StringVar(value="今やること：わんコメログを自動で探してください")
@@ -157,7 +160,45 @@ class EndVoteApp:
         )
         self.cancel_countdown_button.pack(anchor="w", pady=(6, 0))
 
-        obs_frame = tk.LabelFrame(frame, text="OBS連携", padx=12, pady=8)
+        self.countdown_cancel_frame = tk.Frame(
+            frame,
+            padx=12,
+            pady=10,
+            highlightthickness=2,
+            highlightbackground="#dc2626",
+            background="#fff1f2",
+        )
+        tk.Label(
+            self.countdown_cancel_frame,
+            text="カウントダウン中です。止めるなら下の赤いボタン、または Enter / Space を押してください。",
+            font=("Yu Gothic UI", 12, "bold"),
+            fg="#7f1d1d",
+            bg="#fff1f2",
+            wraplength=690,
+            justify="left",
+        ).pack(anchor="center", pady=(0, 6))
+        self.countdown_cancel_canvas = tk.Canvas(
+            self.countdown_cancel_frame,
+            width=250,
+            height=250,
+            bg="#fff1f2",
+            highlightthickness=0,
+            cursor="hand2",
+        )
+        self.countdown_cancel_canvas.pack(anchor="center")
+        self.countdown_cancel_canvas.create_oval(
+            10, 10, 240, 240, fill="#dc2626", outline="#991b1b", width=5, tags=("button",)
+        )
+        self.countdown_cancel_canvas.create_text(
+            125, 105, text="まだ起きてる！", fill="white", font=("Yu Gothic UI", 18, "bold"), tags=("button",)
+        )
+        self.countdown_cancel_canvas.create_text(
+            125, 145, text="カウントダウン停止", fill="white", font=("Yu Gothic UI", 17, "bold"), tags=("button",)
+        )
+        self.countdown_cancel_canvas.tag_bind("button", "<Button-1>", lambda _event: self._cancel_countdown())
+
+        self.obs_frame = tk.LabelFrame(frame, text="OBS連携", padx=12, pady=8)
+        obs_frame = self.obs_frame
         obs_frame.pack(fill="x", pady=(0, 6))
         tk.Label(
             obs_frame,
@@ -737,6 +778,66 @@ class EndVoteApp:
         self.cancel_countdown_button.config(
             state="normal" if state.get("can_cancel") else "disabled"
         )
+        self._sync_countdown_cancel_controls(countdown_cancel_input_enabled(mode))
+
+    def _sync_countdown_cancel_controls(self, active: bool) -> None:
+        if active == self.countdown_cancel_controls_active:
+            return
+        self.countdown_cancel_controls_active = active
+        if active:
+            self.countdown_cancel_frame.pack(fill="x", pady=(0, 8), before=self.obs_frame)
+            self._bind_countdown_shortcuts()
+            self._bring_window_to_front_for_countdown()
+        else:
+            self.countdown_cancel_frame.pack_forget()
+            self._unbind_countdown_shortcuts()
+            self._release_countdown_topmost()
+
+    def _bind_countdown_shortcuts(self) -> None:
+        if self.countdown_shortcuts_bound:
+            return
+        self.countdown_shortcuts_bound = True
+        self.root.bind_all("<Return>", self._on_countdown_cancel_shortcut)
+        self.root.bind_all("<KP_Enter>", self._on_countdown_cancel_shortcut)
+        self.root.bind_all("<space>", self._on_countdown_cancel_shortcut)
+
+    def _unbind_countdown_shortcuts(self) -> None:
+        if not self.countdown_shortcuts_bound:
+            return
+        self.countdown_shortcuts_bound = False
+        self.root.unbind_all("<Return>")
+        self.root.unbind_all("<KP_Enter>")
+        self.root.unbind_all("<space>")
+
+    def _on_countdown_cancel_shortcut(self, _event: tk.Event) -> str | None:
+        if self.countdown.mode != MODE_COUNTDOWN:
+            return None
+        self._cancel_countdown()
+        return "break"
+
+    def _bring_window_to_front_for_countdown(self) -> None:
+        try:
+            self.root.deiconify()
+            self.root.lift()
+            self.root.focus_force()
+            self.root.attributes("-topmost", True)
+            if self.countdown_topmost_after_id is not None:
+                self.root.after_cancel(self.countdown_topmost_after_id)
+            self.countdown_topmost_after_id = self.root.after(3000, self._release_countdown_topmost)
+        except tk.TclError:
+            pass
+
+    def _release_countdown_topmost(self) -> None:
+        if self.countdown_topmost_after_id is not None:
+            try:
+                self.root.after_cancel(self.countdown_topmost_after_id)
+            except tk.TclError:
+                pass
+            self.countdown_topmost_after_id = None
+        try:
+            self.root.attributes("-topmost", False)
+        except tk.TclError:
+            pass
 
     def _refresh_obs_static_labels(self) -> None:
         if self.config.obs_websocket_enabled:
@@ -781,10 +882,12 @@ class EndVoteApp:
         self.counter.reset()
         self.countdown.reset()
         self.panel_suppressed_until_next_vote = False
+        self._sync_countdown_cancel_controls(False)
         self._write_state()
         self._refresh_labels()
 
     def _close(self) -> None:
+        self._sync_countdown_cancel_controls(False)
         self._stop_worker()
         self.root.after(50, self.root.destroy)
 
@@ -803,6 +906,10 @@ def overlay_should_be_visible(
     if panel_suppressed:
         return False
     return valid_votes > 0
+
+
+def countdown_cancel_input_enabled(mode: str) -> bool:
+    return mode == MODE_COUNTDOWN
 
 
 def replay_sample(config_path: Path) -> None:

@@ -8,7 +8,7 @@ import unittest
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from end_vote.app import overlay_should_be_visible
+from end_vote.app import countdown_cancel_input_enabled, overlay_should_be_visible
 
 
 class OverlayVisibilityTest(unittest.TestCase):
@@ -68,6 +68,12 @@ class OverlayVisibilityTest(unittest.TestCase):
                 panel_suppressed=True,
             )
         )
+
+    def test_countdown_cancel_input_only_enabled_during_countdown(self) -> None:
+        self.assertTrue(countdown_cancel_input_enabled("countdown"))
+        for mode in ("normal", "cancelled", "would_stop", "stopping", "stopped", "stop_failed"):
+            with self.subTest(mode=mode):
+                self.assertFalse(countdown_cancel_input_enabled(mode))
 
 
 if __name__ == "__main__":

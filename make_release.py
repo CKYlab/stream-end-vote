@@ -8,7 +8,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 RELEASE = ROOT / "release"
-ZIP_PATH = ROOT / "配信終了投票くん_v0.5.zip"
+ZIP_PATH = ROOT / "配信終了投票くん_v0.6.zip"
 
 EXPECTED_RELEASE_NAMES = [
     "01_最初に読む_使い方.txt",
