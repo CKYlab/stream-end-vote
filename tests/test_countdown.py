@@ -213,6 +213,50 @@ class CountdownControllerTest(unittest.TestCase):
             controller.mode, (MODE_STOPPING, MODE_STOPPED, MODE_STOP_FAILED)
         )
 
+    def test_countdown_can_restart_after_cancel_and_vote_reset(self) -> None:
+        controller = make_controller()
+        base = time.time()
+
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        self.assertEqual(controller.mode, MODE_COUNTDOWN)
+        controller.cancel(now=base + 1)
+
+        controller.reset()
+        controller.update(threshold_met=True, live_id="live-1", now=base + 2)
+
+        self.assertEqual(controller.mode, MODE_COUNTDOWN)
+        state = controller.state(now=base + 2)
+        self.assertEqual(state["countdown_remaining"], 30)
+        self.assertTrue(state["can_cancel"])
+
+    def test_cancel_does_not_immediately_restart_same_vote_round(self) -> None:
+        controller = make_controller(cancelled_display_seconds=0)
+        base = time.time()
+
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        controller.cancel(now=base + 1)
+        controller.update(threshold_met=True, live_id="live-1", now=base + 2)
+
+        self.assertEqual(controller.mode, MODE_NORMAL)
+        state = controller.state(now=base + 2)
+        self.assertEqual(state["countdown_remaining"], 0)
+        self.assertIsNone(state["countdown_started_at"])
+        self.assertFalse(state["can_cancel"])
+
+    def test_vote_reset_clears_cancel_suppression(self) -> None:
+        controller = make_controller(cancelled_display_seconds=0)
+        base = time.time()
+
+        controller.update(threshold_met=True, live_id="live-1", now=base)
+        controller.cancel(now=base + 1)
+        controller.update(threshold_met=True, live_id="live-1", now=base + 2)
+        self.assertEqual(controller.mode, MODE_NORMAL)
+
+        controller.reset()
+        controller.update(threshold_met=True, live_id="live-1", now=base + 3)
+
+        self.assertEqual(controller.mode, MODE_COUNTDOWN)
+
     def test_reset_clears_stop_result(self) -> None:
         controller = make_controller(
             stop_streaming_enabled=True, on_stop_intent=lambda: None

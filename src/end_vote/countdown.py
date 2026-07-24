@@ -116,6 +116,8 @@ class CountdownController:
         self._deadline = None
         self._finished_at = None
         self._cancelled_at = current
+        self.stop_result = None
+        self.stop_error = None
         return True
 
     def report_stop_success(self) -> None:
@@ -129,8 +131,11 @@ class CountdownController:
         self.stop_error = error
 
     def reset(self) -> None:
-        """表示状態だけをnormalへ戻す。同一配信の発動履歴は保持する。"""
+        """新しい投票ラウンドを開始できる初期状態へ戻す。"""
         self._to_normal()
+        self._armed = True
+        self._triggered_live_ids.clear()
+        self._triggered_without_live_id = False
 
     def state(self, *, now: float | None = None) -> dict[str, Any]:
         current = time.time() if now is None else now

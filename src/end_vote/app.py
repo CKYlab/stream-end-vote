@@ -49,6 +49,7 @@ class EndVoteApp:
         self.worker: threading.Thread | None = None
         self.last_overlay_snapshot: dict | None = None
         self.panel_suppressed_until_next_vote = False
+        self.previous_valid_votes = 0
         self.countdown_cancel_controls_active = False
         self.countdown_shortcuts_bound = False
         self.countdown_topmost_after_id: str | None = None
@@ -443,6 +444,7 @@ class EndVoteApp:
         self.obs = self._create_obs_controller()
         self.countdown = self._create_countdown()
         self.current_live_id = None
+        self.previous_valid_votes = 0
         self._refresh_obs_static_labels()
         self._write_state()
         self._refresh_labels()
@@ -501,6 +503,13 @@ class EndVoteApp:
 
     def _current_state(self) -> dict:
         state = self.counter.state()
+        valid_votes = int(state["valid_votes"])
+        if valid_votes == 0 and self.previous_valid_votes > 0:
+            # ローリング受付時間内の票がすべて失効した時点を、
+            # 明示リセットと同じ「新しい投票ラウンド」として扱う。
+            self.countdown.reset()
+            self.panel_suppressed_until_next_vote = False
+        self.previous_valid_votes = valid_votes
         self.countdown.update(
             threshold_met=state["threshold_met"],
             live_id=self.current_live_id,
@@ -881,6 +890,7 @@ class EndVoteApp:
     def _reset(self) -> None:
         self.counter.reset()
         self.countdown.reset()
+        self.previous_valid_votes = 0
         self.panel_suppressed_until_next_vote = False
         self._sync_countdown_cancel_controls(False)
         self._write_state()

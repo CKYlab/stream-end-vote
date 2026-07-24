@@ -15,7 +15,7 @@
 - カウントダウン中は本体ウィンドウが前面に出ます。大きな停止ボタン、またはEnter/Spaceで止められます。
 - チャットコメントから停止やキャンセルはできません。操作はローカルGUIのみです。
 - OBS接続に失敗してもアプリは落ちません。GUIとoverlayにエラーを表示して`stop_failed`になります。
-- `trigger_once_per_live=true`なら同じ`liveId`では原則1回だけ発動します。
+- `trigger_once_per_live=true`なら同じ`liveId`の同じ投票ラウンドでは1回だけ発動します。GUIで「投票をリセット」するか、受付時間切れですべての票が失効すると、新しいラウンドとして再び発動できます。
 - 過去版の`v0.3.5-fixed`は、投票結果とカウントダウンを表示するだけの安全版です。
 - v0.6候補では、OBSブラウザソースは入れっぱなしでOKです。普段は透明で表示されず、投票コマンドが来た時だけ投票パネルが表示されます。
 
@@ -62,11 +62,13 @@ GUIの「OBS設定」画面にある「OBS接続テスト」ボタンで、接�
 
 あわせて`visible` / `display_enabled` / `countdown_remaining` / `countdown_started_at` / `can_cancel` / `obs_connected` / `stop_streaming_enabled` / `stop_result` / `stop_error`が書き出され、`overlay.html`がOBS上に表示します。`display_enabled=true`は「必要時に表示してよい」、`visible=true`は「今OBSに表示する」という意味です。
 
+キャンセル後は、同じ票が残っている間はカウントダウンを再開しません。「投票をリセット」した後、または受付時間切れですべての票が失効した後に、新しく終了ラインへ到達すると再びカウントダウンします。キャンセル・リセット時は残り秒数、開始時刻、キャンセル可否、停止結果・エラーも初期状態へ戻して`overlay_state.json`へ反映します。
+
 ## カウントダウン関連のconfig.json設定
 
 - `countdown_enabled`: 終了ライン到達時にカウントダウン表示をするか（既定: `true`）
 - `countdown_seconds`: カウントダウン秒数（既定: `30`）
-- `trigger_once_per_live`: 同じ`liveId`では1回しか発動しないか（既定: `true`）
+- `trigger_once_per_live`: 同じ`liveId`の同じ投票ラウンドでは1回しか発動しないか（既定: `true`）
 
 ## v0.1の範囲
 
