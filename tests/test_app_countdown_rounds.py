@@ -65,6 +65,40 @@ def cast_twenty_votes(app: EndVoteApp, *, round_number: int) -> None:
 
 
 class AppCountdownRoundTest(unittest.TestCase):
+    def test_countdown_binds_one_any_key_handler(self) -> None:
+        bindings: list[str] = []
+        app = EndVoteApp.__new__(EndVoteApp)
+        app.countdown_shortcuts_bound = False
+        app.root = SimpleNamespace(
+            bind_all=lambda sequence, handler: bindings.append(sequence)
+        )
+
+        app._bind_countdown_shortcuts()
+
+        self.assertEqual(bindings, ["<KeyPress>"])
+
+    def test_any_key_cancels_countdown_only_once(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            app = make_app(Path(directory) / "overlay_state.json")
+            cast_twenty_votes(app, round_number=1)
+            app._current_state()
+
+            first_result = app._on_countdown_cancel_shortcut(object())
+            second_result = app._on_countdown_cancel_shortcut(object())
+
+            self.assertEqual(first_result, "break")
+            self.assertIsNone(second_result)
+            self.assertEqual(app.countdown.mode, MODE_CANCELLED)
+
+    def test_key_does_nothing_outside_countdown(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            app = make_app(Path(directory) / "overlay_state.json")
+
+            result = app._on_countdown_cancel_shortcut(object())
+
+            self.assertIsNone(result)
+            self.assertEqual(app.countdown.mode, "normal")
+
     def test_countdown_can_restart_after_cancel_and_vote_reset(self) -> None:
         with tempfile.TemporaryDirectory() as directory:
             app = make_app(Path(directory) / "overlay_state.json")

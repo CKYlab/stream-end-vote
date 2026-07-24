@@ -171,7 +171,7 @@ class EndVoteApp:
         )
         tk.Label(
             self.countdown_cancel_frame,
-            text="カウントダウン中です。止めるなら下の赤いボタン、または Enter / Space を押してください。",
+            text="カウントダウン中です。クリック、または何かキーを押すと止まります。",
             font=("Yu Gothic UI", 12, "bold"),
             fg="#7f1d1d",
             bg="#fff1f2",
@@ -185,6 +185,7 @@ class EndVoteApp:
             bg="#fff1f2",
             highlightthickness=0,
             cursor="hand2",
+            takefocus=True,
         )
         self.countdown_cancel_canvas.pack(anchor="center")
         self.countdown_cancel_canvas.create_oval(
@@ -805,17 +806,13 @@ class EndVoteApp:
         if self.countdown_shortcuts_bound:
             return
         self.countdown_shortcuts_bound = True
-        self.root.bind_all("<Return>", self._on_countdown_cancel_shortcut)
-        self.root.bind_all("<KP_Enter>", self._on_countdown_cancel_shortcut)
-        self.root.bind_all("<space>", self._on_countdown_cancel_shortcut)
+        self.root.bind_all("<KeyPress>", self._on_countdown_cancel_shortcut)
 
     def _unbind_countdown_shortcuts(self) -> None:
         if not self.countdown_shortcuts_bound:
             return
         self.countdown_shortcuts_bound = False
-        self.root.unbind_all("<Return>")
-        self.root.unbind_all("<KP_Enter>")
-        self.root.unbind_all("<space>")
+        self.root.unbind_all("<KeyPress>")
 
     def _on_countdown_cancel_shortcut(self, _event: tk.Event) -> str | None:
         if self.countdown.mode != MODE_COUNTDOWN:
@@ -828,6 +825,7 @@ class EndVoteApp:
             self.root.deiconify()
             self.root.lift()
             self.root.focus_force()
+            self.countdown_cancel_canvas.focus_set()
             self.root.attributes("-topmost", True)
             if self.countdown_topmost_after_id is not None:
                 self.root.after_cancel(self.countdown_topmost_after_id)
