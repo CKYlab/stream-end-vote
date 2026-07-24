@@ -205,10 +205,16 @@ class VoteCounter:
         self.end_rate_threshold = end_rate_threshold
         self.supported_services = set(supported_services)
         self._votes: dict[str, Vote] = {}
+        self._round_id = 0
         self.visible = True
+
+    @property
+    def round_id(self) -> int:
+        return self._round_id
 
     def reset(self) -> None:
         self._votes.clear()
+        self._round_id += 1
 
     def set_visible(self, visible: bool) -> None:
         self.visible = visible
@@ -229,6 +235,7 @@ class VoteCounter:
         else:
             timestamp = time.time() if now is None else now
 
+        self.prune(now=timestamp)
         self._votes[analysis.voter_id] = Vote(
             analysis.voter_id,
             analysis.result,
@@ -236,7 +243,6 @@ class VoteCounter:
             analysis.display_name,
             analysis.service,
         )
-        self.prune(now=timestamp)
         return analysis
 
     def ingest(self, record: dict[str, Any], *, now: float | None = None) -> bool:
@@ -246,6 +252,7 @@ class VoteCounter:
     def prune(self, *, now: float | None = None) -> None:
         current = time.time() if now is None else now
         min_timestamp = current - self.voting_window_seconds
+        had_votes = bool(self._votes)
         expired = [
             voter_id
             for voter_id, vote in self._votes.items()
@@ -253,6 +260,8 @@ class VoteCounter:
         ]
         for voter_id in expired:
             del self._votes[voter_id]
+        if had_votes and not self._votes:
+            self._round_id += 1
 
     def state(self, *, now: float | None = None) -> dict[str, Any]:
         current = time.time() if now is None else now
@@ -322,4 +331,3 @@ def _normalize_epoch(value: float) -> float:
     if value > 10_000_000_000:
         return value / 1000
     return value
-

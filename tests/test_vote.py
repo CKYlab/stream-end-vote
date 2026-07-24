@@ -234,6 +234,44 @@ class VoteCounterTest(unittest.TestCase):
         self.assertEqual(expired_state["continue_votes"], 0)
         self.assertEqual(expired_state["valid_votes"], 0)
 
+    def test_vote_round_advances_when_old_votes_expire_before_new_vote(self) -> None:
+        counter = VoteCounter(
+            voting_window_seconds=180,
+            minimum_votes=20,
+            end_rate_threshold=0.7,
+            supported_services=("kick",),
+        )
+        base = time.time()
+        counter.process(
+            {
+                "service": "kick",
+                "data": {
+                    "message": "!寝ろ",
+                    "userId": "old-viewer",
+                    "displayName": "old viewer",
+                },
+            },
+            now=base,
+            use_record_timestamp=False,
+        )
+        initial_round = counter.round_id
+
+        counter.process(
+            {
+                "service": "kick",
+                "data": {
+                    "message": "!寝ろ",
+                    "userId": "new-viewer",
+                    "displayName": "new viewer",
+                },
+            },
+            now=base + 181,
+            use_record_timestamp=False,
+        )
+
+        self.assertEqual(counter.round_id, initial_round + 1)
+        self.assertEqual(counter.state(now=base + 181)["valid_votes"], 1)
+
     def test_rolling_window_prunes_old_votes(self) -> None:
         counter = VoteCounter(
             voting_window_seconds=180,
