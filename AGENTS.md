@@ -4,11 +4,11 @@
 
 Build a Windows tool that reads OneComme JSONL comment logs and displays a stream-ending vote meter in an OBS browser source.
 
-## v0.1 Guardrails
+## Product Guardrails
 
-- Do not add OBS stop-streaming behavior in v0.1.
+- OBS stop-streaming must remain opt-in and disabled in release defaults.
 - Do not add chat-based admin commands such as `!投票開始`, `!リセット`, or forced end commands.
-- Do not assume moderators are present. Amemiya's streams do not have moderators on TwitCasting, Kick, or Twitch.
+- Do not assume moderators are present.
 - Listener chat commands are vote commands only.
 - Admin operations must stay local to the Windows GUI.
 
@@ -23,4 +23,3 @@ Build a Windows tool that reads OneComme JSONL comment logs and displays a strea
 - For TwitCasting anonymous comments, use `data.liveId` plus the anonymous number in `data.displayName`.
 - For normal users, prefer `data.userId`, then stable screen-name fields.
 - One voter has one vote; later votes overwrite earlier votes.
-

@@ -4,7 +4,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ========================================
-echo Build amemiya-end-vote v0.7 candidate
+echo Build stream-end-vote v1.0.0
 echo ========================================
 echo.
 
@@ -12,7 +12,7 @@ echo [1/4] Cleaning old build files...
 if exist "build" rmdir /S /Q "build"
 if exist "dist" rmdir /S /Q "dist"
 if exist "release" rmdir /S /Q "release"
-if exist "amemiya-end-vote.spec" del /Q "amemiya-end-vote.spec"
+if exist "stream-end-vote.spec" del /Q "stream-end-vote.spec"
 
 echo.
 echo [2/4] Installing requirements...
@@ -30,7 +30,7 @@ if errorlevel 1 goto error
 
 echo.
 echo [4/4] Building exe...
-python -m PyInstaller --clean --noconfirm --onefile --windowed --name amemiya-end-vote --paths "%~dp0src" --collect-submodules end_vote --hidden-import end_vote.app --hidden-import end_vote.config --hidden-import end_vote.vote --hidden-import end_vote.log_reader --hidden-import end_vote.log_discovery --hidden-import end_vote.overlay --hidden-import end_vote.countdown --hidden-import end_vote.obs_control --hidden-import end_vote.obs_settings run.py
+python -m PyInstaller --clean --noconfirm --onefile --windowed --name stream-end-vote --paths "%~dp0src" --collect-submodules end_vote --hidden-import end_vote.app --hidden-import end_vote.config --hidden-import end_vote.vote --hidden-import end_vote.log_reader --hidden-import end_vote.log_discovery --hidden-import end_vote.overlay --hidden-import end_vote.countdown --hidden-import end_vote.obs_control --hidden-import end_vote.obs_settings run.py
 if errorlevel 1 goto error
 
 echo.
@@ -45,7 +45,7 @@ echo ========================================
 echo.
 echo Output:
 echo release
-echo 配信終了投票くん_v0.7候補.zip
+echo 配信終了投票くん_v1.0.0.zip
 echo.
 if not "%CI%"=="1" pause
 exit /b 0

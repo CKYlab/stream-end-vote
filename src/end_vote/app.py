@@ -59,7 +59,7 @@ class EndVoteApp:
         self.countdown_shortcuts_bound = False
         self.countdown_topmost_after_id: str | None = None
 
-        self.root.title("Amemiya End Vote v0.7候補")
+        self.root.title("配信終了投票くん v1.0.0")
         self.root.geometry("780x780")
         self.root.resizable(False, False)
 
@@ -1029,7 +1029,7 @@ def replay_sample(config_path: Path) -> None:
 
 
 def main() -> None:
-    parser = argparse.ArgumentParser(description="Amemiya end-vote counter")
+    parser = argparse.ArgumentParser(description="配信終了投票くん")
     parser.add_argument("--config", default=str(DEFAULT_CONFIG_PATH))
     parser.add_argument(
         "--replay-sample",
@@ -1048,7 +1048,7 @@ def main() -> None:
         EndVoteApp(root, config_path)
         root.mainloop()
     except Exception as exc:
-        messagebox.showerror("Amemiya End Vote", str(exc))
+        messagebox.showerror("配信終了投票くん", str(exc))
         raise
 
 

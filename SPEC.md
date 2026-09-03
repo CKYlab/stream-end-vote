@@ -2,7 +2,7 @@
 
 ## Product name
 
-amemiya-end-vote
+stream-end-vote
 
 ## Purpose
 
@@ -12,7 +12,7 @@ Display a vote meter for ending a stream based on OneComme comments.
 
 Display-only OBS overlay.
 
-## Non-goals for v0.1
+## Non-goals
 
 - Native OBS plugin
 - Automatic stream shutdown

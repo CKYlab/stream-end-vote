@@ -8,7 +8,8 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 RELEASE = ROOT / "release"
-ZIP_PATH = ROOT / "配信終了投票くん_v0.7候補.zip"
+ZIP_PATH = ROOT / "配信終了投票くん_v1.0.0.zip"
+BUILT_EXE_NAME = "stream-end-vote.exe"
 
 EXPECTED_RELEASE_NAMES = [
     "01_最初に読む_使い方.txt",
@@ -16,15 +17,18 @@ EXPECTED_RELEASE_NAMES = [
     "03_OBSに入れる_overlay.html",
     "config.json",
     "overlay_state.json",
+    "LICENSE",
 ]
 
 FORBIDDEN_RELEASE_TEXT = [
     "CHiKA",
     "ちか",
     "CodexTest",
+    "Amemiya",
+    "雨宮",
+    "chobitsuki",
     "C:\\Users",
     "D:\\",
-    "v0.3.5",
 ]
 
 
@@ -35,8 +39,9 @@ def main() -> None:
 
     copied_files = [
         (ROOT / "01_最初に読む_使い方.txt", RELEASE / EXPECTED_RELEASE_NAMES[0]),
-        (ROOT / "dist" / "amemiya-end-vote.exe", RELEASE / EXPECTED_RELEASE_NAMES[1]),
+        (ROOT / "dist" / BUILT_EXE_NAME, RELEASE / EXPECTED_RELEASE_NAMES[1]),
         (ROOT / "overlay.html", RELEASE / EXPECTED_RELEASE_NAMES[2]),
+        (ROOT / "LICENSE", RELEASE / "LICENSE"),
     ]
 
     for src, dst in copied_files:
@@ -121,13 +126,14 @@ def verify_no_private_text() -> None:
 
         # PyInstaller製exeにはビルド時のパス断片が混ざることがあるので、
         # 配布者が直接読むテキスト系ファイルだけ検査する。
-        if path.suffix.lower() not in text_suffixes:
+        if path.suffix.lower() not in text_suffixes and path.name != "LICENSE":
             continue
 
         text = path.read_text(encoding="utf-8", errors="ignore")
+        folded_text = text.casefold()
 
         for forbidden in FORBIDDEN_RELEASE_TEXT:
-            if forbidden in text:
+            if forbidden.casefold() in folded_text:
                 raise RuntimeError(
                     f"Private text found in {path.name}: {forbidden}"
                 )

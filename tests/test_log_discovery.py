@@ -59,7 +59,7 @@ class LogDiscoveryTest(unittest.TestCase):
         self.assertEqual([item.path.name for item in candidates], ["2026-07-05.jsonl"])
 
     def test_missing_comments_dir_returns_empty_list(self) -> None:
-        missing = Path(tempfile.gettempdir()) / "amemiya-missing-onecomme-comments"
+        missing = Path(tempfile.gettempdir()) / "stream-end-vote-missing-onecomme-comments"
         self.assertEqual(find_onecomme_log_candidates(search_dirs=[missing]), [])
 
 
