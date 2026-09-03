@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import replace
 from datetime import datetime
 import queue
 import threading
@@ -9,7 +10,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-from .config import DEFAULT_CONFIG_PATH, load_config, update_config
+from .config import DEFAULT_CONFIG, DEFAULT_CONFIG_PATH, load_config, update_config
 from .countdown import (
     MODE_CANCELLED,
     MODE_COUNTDOWN,
@@ -34,6 +35,10 @@ from .overlay import write_overlay_state
 from .vote import VoteAnalysis, VoteCounter, extract_live_id
 
 
+class VoteSettingsRefreshError(OSError):
+    pass
+
+
 class EndVoteApp:
     def __init__(self, root: tk.Tk, config_path: Path) -> None:
         self.root = root
@@ -54,7 +59,7 @@ class EndVoteApp:
         self.countdown_shortcuts_bound = False
         self.countdown_topmost_after_id: str | None = None
 
-        self.root.title("Amemiya End Vote v0.6")
+        self.root.title("Amemiya End Vote v0.7候補")
         self.root.geometry("780x780")
         self.root.resizable(False, False)
 
@@ -264,6 +269,9 @@ class EndVoteApp:
             command=self._open_obs_settings,
         ).pack(side="left", padx=(0, 8))
         tk.Button(button_row, text="投票をリセット", width=14, command=self._reset).pack(
+            side="left", padx=(0, 8)
+        )
+        tk.Button(button_row, text="投票設定", width=10, command=self._open_vote_settings).pack(
             side="left", padx=(0, 8)
         )
         tk.Button(button_row, text="終了する", width=10, command=self._close).pack(
@@ -540,6 +548,70 @@ class EndVoteApp:
             self.event_queue.put({"type": "obs_test_result", "result": result})
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _open_vote_settings(self) -> None:
+        dialog = tk.Toplevel(self.root)
+        dialog.title("投票設定")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        frame = tk.Frame(dialog, padx=18, pady=16)
+        frame.pack(fill="both", expand=True)
+        form = tk.Frame(frame)
+        form.pack(fill="x")
+        tk.Label(form, text="判定に必要な人数:").pack(side="left", padx=(0, 8))
+        value_var = tk.StringVar(master=dialog, value=str(self.config.minimum_votes))
+        entry = tk.Entry(form, textvariable=value_var, width=8)
+        entry.pack(side="left")
+        tk.Label(frame, text="1〜999人（初期値20人）。保存するとすぐに反映されます。").pack(
+            anchor="w", pady=(10, 0)
+        )
+        tk.Label(frame, text="現在の票が条件を満たすとカウントダウンが始まります。").pack(anchor="w")
+        status = tk.Label(frame, text="", anchor="w", justify="left", wraplength=420)
+        status.pack(fill="x", pady=(10, 8))
+
+        def save() -> None:
+            try:
+                self._save_vote_settings(value_var.get())
+            except ValueError as exc:
+                status.config(text=str(exc), fg="#b91c1c")
+                return
+            except VoteSettingsRefreshError as exc:
+                status.config(text=str(exc), fg="#92400e")
+                return
+            except OSError:
+                status.config(text="設定または表示ファイルの書き込みに失敗しました。保存先を確認してください。", fg="#b91c1c")
+                return
+            status.config(text="保存しました。設定を反映しました。", fg="#166534")
+
+        def restore_default() -> None:
+            value_var.set(str(DEFAULT_CONFIG["minimum_votes"]))
+            status.config(text="初期値20人に戻しました。「保存」で確定します。", fg="#374151")
+
+        buttons = tk.Frame(frame)
+        buttons.pack(anchor="e")
+        tk.Button(buttons, text="保存", width=10, command=save).pack(side="left", padx=(0, 8))
+        tk.Button(buttons, text="初期値に戻す", width=14, command=restore_default).pack(side="left", padx=(0, 8))
+        tk.Button(buttons, text="キャンセル", width=10, command=dialog.destroy).pack(side="left")
+        # モーダルなgrabは使わず、カウントダウン中の停止ボタンを操作可能に保つ。
+        if self.countdown.mode == MODE_COUNTDOWN:
+            self._bring_window_to_front_for_countdown()
+        else:
+            entry.focus_set()
+
+    def _save_vote_settings(self, value: str) -> None:
+        if not value.isascii() or not value.isdecimal() or not 1 <= int(value) <= 999:
+            raise ValueError("判定に必要な人数は1〜999の整数で入力してください。")
+        minimum_votes = int(value)
+        update_config(self.config_path, {"minimum_votes": minimum_votes})
+        self.config = replace(self.config, minimum_votes=minimum_votes)
+        self.counter.minimum_votes = minimum_votes
+        try:
+            self._write_state()
+        except OSError as exc:
+            raise VoteSettingsRefreshError(
+                "設定は保存しました。OBS表示の更新に失敗しましたが、自動的に再試行します。"
+            ) from exc
+        self._refresh_labels()
 
     def _open_obs_settings(self) -> None:
         dialog = tk.Toplevel(self.root)

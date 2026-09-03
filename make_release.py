@@ -8,7 +8,7 @@ import zipfile
 
 ROOT = Path(__file__).resolve().parent
 RELEASE = ROOT / "release"
-ZIP_PATH = ROOT / "配信終了投票くん_v0.6.zip"
+ZIP_PATH = ROOT / "配信終了投票くん_v0.7候補.zip"
 
 EXPECTED_RELEASE_NAMES = [
     "01_最初に読む_使い方.txt",
@@ -64,6 +64,7 @@ def write_release_config(path: Path) -> None:
     config = json.loads(source_path.read_text(encoding="utf-8"))
     config["log_file_path"] = ""
     config["overlay_state_path"] = "overlay_state.json"
+    config["minimum_votes"] = 20
     # 配布物は必ず安全側: 停止OFF・OBS連携OFF・パスワード空で作り直す。
     config["stop_streaming_enabled"] = False
     config["obs_websocket_enabled"] = False
