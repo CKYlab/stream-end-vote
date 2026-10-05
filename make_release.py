@@ -20,7 +20,7 @@ EXPECTED_RELEASE_NAMES = [
     "03_OBSに入れる_overlay.html",
     "config.json",
     "overlay_state.json",
-    "LICENSE",
+    "利用規約.txt",
 ]
 
 FORBIDDEN_RELEASE_TEXT = [
@@ -44,7 +44,7 @@ def main() -> None:
         (ROOT / "01_最初に読む_使い方.txt", RELEASE / EXPECTED_RELEASE_NAMES[0]),
         (ROOT / "dist" / BUILT_EXE_NAME, RELEASE / EXPECTED_RELEASE_NAMES[1]),
         (ROOT / "overlay.html", RELEASE / EXPECTED_RELEASE_NAMES[2]),
-        (ROOT / "LICENSE", RELEASE / "LICENSE"),
+        (ROOT / "利用規約.txt", RELEASE / "利用規約.txt"),
     ]
 
     for src, dst in copied_files:
@@ -132,7 +132,7 @@ def verify_no_private_text() -> None:
 
         # PyInstaller製exeにはビルド時のパス断片が混ざることがあるので、
         # 配布者が直接読むテキスト系ファイルだけ検査する。
-        if path.suffix.lower() not in text_suffixes and path.name != "LICENSE":
+        if path.suffix.lower() not in text_suffixes:
             continue
 
         text = path.read_text(encoding="utf-8", errors="ignore")

@@ -16,7 +16,27 @@ class ReleaseDefaultsTest(unittest.TestCase):
     def test_public_release_name_and_internal_executable_name(self) -> None:
         self.assertEqual(make_release.ZIP_PATH.name, "配信終了投票くん_v1.1.0.zip")
         self.assertEqual(make_release.BUILT_EXE_NAME, "stream-end-vote.exe")
-        self.assertIn("LICENSE", make_release.EXPECTED_RELEASE_NAMES)
+        self.assertIn("利用規約.txt", make_release.EXPECTED_RELEASE_NAMES)
+        self.assertNotIn("LICENSE", make_release.EXPECTED_RELEASE_NAMES)
+
+    def test_release_contains_terms_instead_of_license(self) -> None:
+        import zipfile
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root / "dist").mkdir()
+            (root / "dist" / make_release.BUILT_EXE_NAME).write_bytes(b"test executable")
+            for name in ("01_最初に読む_使い方.txt", "overlay.html", "利用規約.txt", "config.json"):
+                (root / name).write_bytes((ROOT / name).read_bytes())
+            # A source LICENSE must never leak into the distribution.
+            (root / "LICENSE").write_text("MIT License", encoding="utf-8")
+            release = root / "release"
+            archive_path = root / "test.zip"
+            with patch.object(make_release, "ROOT", root), patch.object(make_release, "RELEASE", release), patch.object(make_release, "ZIP_PATH", archive_path):
+                make_release.main()
+            self.assertFalse((release / "LICENSE").exists())
+            with zipfile.ZipFile(archive_path) as archive:
+                self.assertEqual(set(archive.namelist()), set(make_release.EXPECTED_RELEASE_NAMES))
+                self.assertEqual(archive.read("利用規約.txt"), (ROOT / "利用規約.txt").read_bytes())
 
     def test_every_forbidden_public_identifier_is_rejected(self) -> None:
         cases = (
