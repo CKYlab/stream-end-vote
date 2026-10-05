@@ -4,11 +4,14 @@ import json
 from pathlib import Path
 import shutil
 import zipfile
+import sys
+sys.path.insert(0, str(Path(__file__).resolve().parent / "src"))
+from end_vote.display_settings import DISPLAY_DEFAULTS
 
 
 ROOT = Path(__file__).resolve().parent
 RELEASE = ROOT / "release"
-ZIP_PATH = ROOT / "配信終了投票くん_v1.0.0.zip"
+ZIP_PATH = ROOT / "配信終了投票くん_v1.1.0.zip"
 BUILT_EXE_NAME = "stream-end-vote.exe"
 
 EXPECTED_RELEASE_NAMES = [
@@ -70,6 +73,7 @@ def write_release_config(path: Path) -> None:
     config["log_file_path"] = ""
     config["overlay_state_path"] = "overlay_state.json"
     config["minimum_votes"] = 20
+    config.update(DISPLAY_DEFAULTS)
     # 配布物は必ず安全側: 停止OFF・OBS連携OFF・パスワード空で作り直す。
     config["stop_streaming_enabled"] = False
     config["obs_websocket_enabled"] = False
@@ -84,6 +88,8 @@ def write_release_config(path: Path) -> None:
 
 def write_release_overlay_state(path: Path) -> None:
     state = {
+        "preview_mode": "none",
+        **DISPLAY_DEFAULTS,
         "visible": False,
         "display_enabled": True,
         "end_votes": 0,

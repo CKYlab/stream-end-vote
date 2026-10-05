@@ -1,4 +1,11 @@
 {
+  "preview_mode": "none",
+  "vote_panel_position": "bottom-right",
+  "countdown_position": "center",
+  "vote_panel_x": 0,
+  "vote_panel_y": 0,
+  "countdown_x": 0,
+  "countdown_y": 0,
   "visible": false,
   "display_enabled": true,
   "end_votes": 0,

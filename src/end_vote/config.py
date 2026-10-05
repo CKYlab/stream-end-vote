@@ -4,6 +4,7 @@ import json
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
+from .display_settings import DISPLAY_DEFAULTS, validate_display_settings
 
 
 DEFAULT_CONFIG_PATH = Path("config.json")
@@ -27,9 +28,16 @@ class AppConfig:
     obs_host: str
     obs_port: int
     obs_password: str
+    vote_panel_position: str = "bottom-right"
+    countdown_position: str = "center"
+    vote_panel_x: int = 0
+    vote_panel_y: int = 0
+    countdown_x: int = 0
+    countdown_y: int = 0
 
 
 DEFAULT_CONFIG: dict[str, Any] = {
+    **DISPLAY_DEFAULTS,
     "log_file_path": "",
     "overlay_state_path": "overlay_state.json",
     "voting_window_seconds": 180,
@@ -102,4 +110,5 @@ def load_config(path: Path = DEFAULT_CONFIG_PATH) -> AppConfig:
         obs_host=str(merged["obs_host"]),
         obs_port=int(merged["obs_port"]),
         obs_password=str(merged["obs_password"]),
+        **validate_display_settings(merged),
     )

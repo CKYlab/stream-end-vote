@@ -1,4 +1,10 @@
 {
+  "vote_panel_position": "bottom-right",
+  "countdown_position": "center",
+  "vote_panel_x": 0,
+  "vote_panel_y": 0,
+  "countdown_x": 0,
+  "countdown_y": 0,
   "log_file_path": "onecomme_log.jsonl",
   "overlay_state_path": "overlay_state.json",
   "voting_window_seconds": 180,

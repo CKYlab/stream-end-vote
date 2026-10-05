@@ -21,6 +21,9 @@
       right: 32px;
       bottom: 32px;
       width: 360px;
+      max-width: calc(100vw - 16px);
+      max-height: calc(100vh - 16px);
+      overflow: auto;
       color: #f8fafc;
       text-shadow: 0 2px 10px rgba(0, 0, 0, 0.45);
       transition: opacity 180ms ease, transform 180ms ease;
@@ -252,6 +255,15 @@
     }
 
     function render(state) {
+      const previewMode = state.preview_mode;
+      if (previewMode === "vote" || previewMode === "countdown") {
+        state = { ...state, visible: true, end_votes: 14, continue_votes: 6,
+          valid_votes: 20, end_rate: 0.7, threshold_met: false,
+          minimum_votes: 20, end_rate_threshold: 0.7,
+          mode: previewMode === "countdown" ? "countdown" : "normal",
+          countdown_remaining: 30, can_cancel: false, stop_streaming_enabled: false };
+      }
+      lastState = state;
       const endRate = percent(state.end_rate);
       overlay.classList.toggle("hidden", state.visible === false);
       endVotes.textContent = state.end_votes || 0;
@@ -271,7 +283,41 @@
       }
 
       renderCountdown(state);
+      if (previewMode === "vote") decision.textContent = "位置調整プレビュー（ダミー投票）";
+      if (previewMode === "countdown") {
+        overlay.classList.add("hidden");
+        countdownSub.textContent = "位置調整プレビュー";
+        countdownNote.textContent = "ダミー表示です。配信停止は実行されません。";
+      }
+      positionDisplays(state);
     }
+
+    let lastState = {};
+    const clamp = (value, low, high) => Math.max(low, Math.min(Math.max(low, high), value));
+    function offset(value) {
+      return clamp(Number.isFinite(Number(value)) ? Number(value) : 0, -500, 500);
+    }
+    function positionDisplays(state) {
+      const panelPosition = ["bottom-right", "bottom-left", "top-right", "top-left"].includes(state.vote_panel_position)
+        ? state.vote_panel_position : "bottom-right";
+      const width = overlay.offsetWidth;
+      const height = overlay.offsetHeight;
+      const panelX = panelPosition.endsWith("left") ? 32 : innerWidth - width - 32;
+      const panelY = panelPosition.startsWith("top") ? 32 : innerHeight - height - 32;
+      overlay.style.right = "auto";
+      overlay.style.bottom = "auto";
+      overlay.style.left = `${clamp(panelX + offset(state.vote_panel_x), 8, innerWidth - width - 8)}px`;
+      overlay.style.top = `${clamp(panelY + offset(state.vote_panel_y), 8, innerHeight - height - 8)}px`;
+      if (!countdown.hidden) {
+        const halfWidth = countdown.offsetWidth / 2;
+        const halfHeight = countdown.offsetHeight / 2;
+        const y = state.countdown_position === "top" ? halfHeight + 32
+          : state.countdown_position === "bottom" ? innerHeight - halfHeight - 32 : innerHeight / 2;
+        countdown.style.left = `${clamp(innerWidth / 2 + offset(state.countdown_x), halfWidth + 8, innerWidth - halfWidth - 8)}px`;
+        countdown.style.top = `${clamp(y + offset(state.countdown_y), halfHeight + 8, innerHeight - halfHeight - 8)}px`;
+      }
+    }
+    addEventListener("resize", () => positionDisplays(lastState));
 
     function renderCountdown(state) {
       const mode = state.mode || "normal";

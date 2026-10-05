@@ -9,6 +9,8 @@ import time
 import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
+from tkinter import ttk
+from .display_settings import DISPLAY_DEFAULTS, PANEL_POSITIONS, COUNTDOWN_POSITIONS, validate_display_settings
 
 from .config import DEFAULT_CONFIG, DEFAULT_CONFIG_PATH, load_config, update_config
 from .countdown import (
@@ -59,7 +61,7 @@ class EndVoteApp:
         self.countdown_shortcuts_bound = False
         self.countdown_topmost_after_id: str | None = None
 
-        self.root.title("配信終了投票くん v1.0.0")
+        self.root.title("配信終了投票くん v1.1.0")
         self.root.geometry("780x780")
         self.root.resizable(False, False)
 
@@ -271,6 +273,7 @@ class EndVoteApp:
         tk.Button(button_row, text="投票をリセット", width=14, command=self._reset).pack(
             side="left", padx=(0, 8)
         )
+        tk.Button(button_row, text="表示設定", width=10, command=self._open_display_settings).pack(side="left", padx=4)
         tk.Button(button_row, text="投票設定", width=10, command=self._open_vote_settings).pack(
             side="left", padx=(0, 8)
         )
@@ -523,6 +526,7 @@ class EndVoteApp:
             live_id=self.current_live_id,
         )
         state.update(self.countdown.state())
+        state.update({key: getattr(self.config, key, default) for key, default in DISPLAY_DEFAULTS.items()})
         state["obs_connected"] = self.obs_connected
         state["stop_streaming_enabled"] = self._stop_streaming_effective()
         state["display_enabled"] = bool(state["visible"])
@@ -532,7 +536,31 @@ class EndVoteApp:
             valid_votes=int(state["valid_votes"]),
             panel_suppressed=self.panel_suppressed_until_next_vote,
         )
+        return self._with_preview(state)
+
+    def _with_preview(self, state: dict) -> dict:
+        state = dict(state)
+        state["preview_mode"] = getattr(self, "preview_mode", "none")
+        if state["preview_mode"] != "none":
+            state.update(getattr(self, "preview_settings", {}))
         return state
+
+    def _set_display_preview(self, mode: str, values: dict | None = None) -> None:
+        if mode not in ("none", "vote", "countdown"):
+            raise ValueError("不明なプレビュー種類です。")
+        settings = validate_display_settings(values or {}) if mode != "none" else {}
+        self.preview_mode = mode
+        self.preview_settings = settings
+        # Read-only snapshots: preview controls never update the countdown controller.
+        state = self.counter.state()
+        state.update(self.countdown.state())
+        state.update({key: getattr(self.config, key, default) for key, default in DISPLAY_DEFAULTS.items()})
+        state["visible"] = overlay_should_be_visible(
+            display_enabled=self.counter.visible, mode=state["mode"],
+            valid_votes=state["valid_votes"], panel_suppressed=self.panel_suppressed_until_next_vote,
+        )
+        state["stop_streaming_enabled"] = self._stop_streaming_effective()
+        self._write_state_if_changed(self._with_preview(state))
 
     def _test_obs_connection(self) -> None:
         if not self.config.obs_websocket_enabled:
@@ -548,6 +576,106 @@ class EndVoteApp:
             self.event_queue.put({"type": "obs_test_result", "result": result})
 
         threading.Thread(target=worker, daemon=True).start()
+
+    def _save_display_settings(self, values: dict) -> None:
+        updates = validate_display_settings(values)
+        update_config(self.config_path, updates)
+        self.config = replace(self.config, **updates)
+        self.preview_mode = "none"
+        self.preview_settings = {}
+        try:
+            self._write_state()
+        except OSError as exc:
+            raise VoteSettingsRefreshError("設定は保存しました。OBS表示の更新に失敗しましたが、自動的に再試行します。") from exc
+
+    def _open_display_settings(self) -> None:
+        existing = getattr(self, "display_settings_dialog", None)
+        if existing is not None and existing.winfo_exists():
+            existing.lift()
+            return
+        dialog = tk.Toplevel(self.root)
+        self.display_settings_dialog = dialog
+        dialog.title("表示設定")
+        dialog.resizable(False, False)
+        dialog.transient(self.root)
+        frame = tk.Frame(dialog, padx=18, pady=16)
+        frame.pack(fill="both", expand=True)
+        variables = {}
+        choices_by_key = {"vote_panel_position": PANEL_POSITIONS, "countdown_position": COUNTDOWN_POSITIONS}
+        labels = {"vote_panel_position": "投票パネル位置", "countdown_position": "カウントダウン大表示位置", "vote_panel_x": "投票パネル X (px)", "vote_panel_y": "投票パネル Y (px)", "countdown_x": "カウントダウン X (px)", "countdown_y": "カウントダウン Y (px)"}
+        for row, key in enumerate(DISPLAY_DEFAULTS):
+            value = getattr(self.config, key)
+            choices = choices_by_key.get(key)
+            if choices:
+                value = next(label for label, preset in choices.items() if preset == value)
+            variable = tk.StringVar(master=dialog, value=str(value))
+            variables[key] = variable
+            tk.Label(frame, text=labels[key]).grid(row=row, column=0, sticky="w", pady=4)
+            if choices:
+                widget = ttk.Combobox(frame, textvariable=variable, values=list(choices), state="readonly", width=20)
+            else:
+                widget = tk.Spinbox(frame, textvariable=variable, from_=-500, to=500, width=20)
+            widget.grid(row=row, column=1, padx=8, pady=4)
+        tk.Label(frame, text="X: 正で右／負で左、Y: 正で下／負で上。各-500〜+500px。").grid(row=6, columnspan=2, pady=8)
+        status = tk.Label(frame, text="", wraplength=440, justify="left")
+        status.grid(row=7, columnspan=2)
+
+        def collect():
+            return {key: choices_by_key[key].get(var.get(), "") if key in choices_by_key else var.get() for key, var in variables.items()}
+
+        def preview(mode):
+            try:
+                self._set_display_preview(mode, collect())
+            except (ValueError, OSError) as exc:
+                status.config(text=str(exc), fg="#b91c1c")
+                return
+            status.config(text="プレビュー中（実際の投票・停止には影響しません）" if mode != "none" else "プレビューを終了しました。", fg="#374151")
+
+        def changed(*_args):
+            if getattr(self, "preview_mode", "none") != "none":
+                preview(self.preview_mode)
+
+        for variable in variables.values():
+            variable.trace_add("write", changed)
+
+        def close():
+            try:
+                self._set_display_preview("none")
+            except OSError as exc:
+                status.config(text=f"表示更新に失敗しました。再度閉じてください: {exc}", fg="#b91c1c")
+                return
+            dialog.destroy()
+            self.display_settings_dialog = None
+
+        dialog.protocol("WM_DELETE_WINDOW", close)
+
+        def save():
+            values = collect()
+            try:
+                self._save_display_settings(values)
+            except (ValueError, OSError) as exc:
+                status.config(text=str(exc), fg="#b91c1c")
+                return
+            status.config(text="保存しました。OBS表示に反映しました。", fg="#166534")
+
+        def reset():
+            for key, value in DISPLAY_DEFAULTS.items():
+                choices = choices_by_key.get(key)
+                if choices:
+                    value = next(label for label, preset in choices.items() if preset == value)
+                variables[key].set(str(value))
+            status.config(text="初期値に戻しました。「保存」で確定します。", fg="#374151")
+
+        buttons = tk.Frame(frame)
+        buttons.grid(row=9, columnspan=2, pady=(12, 0))
+        previews = tk.Frame(frame)
+        previews.grid(row=8, columnspan=2, pady=(12, 0))
+        for text, mode in (("投票パネルをプレビュー", "vote"), ("カウントダウンをプレビュー", "countdown"), ("プレビュー終了", "none")):
+            tk.Button(previews, text=text, command=lambda mode=mode: preview(mode)).pack(side="left", padx=4)
+        for text, command in (("保存", save), ("初期値に戻す", reset), ("キャンセル", close)):
+            tk.Button(buttons, text=text, command=command, width=14).pack(side="left", padx=4)
+        if self.countdown.mode == MODE_COUNTDOWN:
+            self._bring_window_to_front_for_countdown()
 
     def _open_vote_settings(self) -> None:
         dialog = tk.Toplevel(self.root)
@@ -966,6 +1094,7 @@ class EndVoteApp:
         self._refresh_labels()
 
     def _close(self) -> None:
+        self._set_display_preview("none")
         self._sync_countdown_cancel_controls(False)
         self._stop_worker()
         self.root.after(50, self.root.destroy)

@@ -14,7 +14,7 @@ import make_release
 
 class ReleaseDefaultsTest(unittest.TestCase):
     def test_public_release_name_and_internal_executable_name(self) -> None:
-        self.assertEqual(make_release.ZIP_PATH.name, "配信終了投票くん_v1.0.0.zip")
+        self.assertEqual(make_release.ZIP_PATH.name, "配信終了投票くん_v1.1.0.zip")
         self.assertEqual(make_release.BUILT_EXE_NAME, "stream-end-vote.exe")
         self.assertIn("LICENSE", make_release.EXPECTED_RELEASE_NAMES)
 
@@ -50,6 +50,9 @@ class ReleaseDefaultsTest(unittest.TestCase):
             self.assertFalse(config["stop_streaming_enabled"])
             self.assertFalse(config["obs_websocket_enabled"])
             self.assertEqual(config["obs_password"], "")
+            for key, value in make_release.DISPLAY_DEFAULTS.items():
+                self.assertEqual(config[key], value)
+                self.assertEqual(overlay[key], value)
             self.assertEqual(json.loads(source.read_text(encoding="utf-8"))["minimum_votes"], 5)
 
 

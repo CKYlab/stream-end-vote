@@ -4,7 +4,7 @@ setlocal
 cd /d "%~dp0"
 
 echo ========================================
-echo Build stream-end-vote v1.0.0
+echo Build stream-end-vote v1.1.0
 echo ========================================
 echo.
 
@@ -45,7 +45,7 @@ echo ========================================
 echo.
 echo Output:
 echo release
-echo 配信終了投票くん_v1.0.0.zip
+echo 配信終了投票くん_v1.1.0.zip
 echo.
 if not "%CI%"=="1" pause
 exit /b 0
